@@ -1,0 +1,42 @@
+services:
+
+  # ── FastAPI backend ──────────────────────────────────────────
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    volumes:
+      - ./backend/instance:/app/instance       # SQLite database
+      - ./backend/credentials:/app/credentials # Google service account
+    env_file: ./backend/.env
+    expose:
+      - "8000"
+
+  # ── Nginx: bouwt frontend + SSL-terminatie + reverse proxy ───
+  nginx:
+    build:
+      context: .               # Bouwcontext is de project-root (nodig voor frontend-bestanden)
+      dockerfile: nginx/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - letsencrypt:/etc/letsencrypt:ro    # SSL-certificaten (readonly)
+      - certbot-webroot:/var/www/certbot   # Certbot challenge
+    depends_on:
+      - backend
+
+  # ── Certbot: SSL-certificaten automatisch vernieuwen ─────────
+  certbot:
+    image: certbot/certbot
+    restart: unless-stopped
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot-webroot:/var/www/certbot
+    # Controleert elke 12 uur of verlenging nodig is
+    entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done"
+
+
+volumes:
+  letsencrypt:
+  certbot-webroot:

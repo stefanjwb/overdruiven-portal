@@ -1,0 +1,44 @@
+.header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: 100%;
+  padding-inline: var(--mantine-spacing-lg);
+  border-bottom: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
+}
+
+.logoGroup {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.logoVolledig {
+  height: 44px;
+  width: auto;
+  display: block;
+}
+
+.logoKlein {
+  height: 44px;
+  width: auto;
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .logoVolledig {
+    display: none;
+  }
+  .logoKlein {
+    display: block;
+  }
+}
+
+.headerRight {
+  grid-column: 3;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
