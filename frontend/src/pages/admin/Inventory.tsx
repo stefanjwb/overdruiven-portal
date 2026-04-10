@@ -46,9 +46,6 @@ function ItemForm({ form, setForm }: {
           onChange={v => setForm(f => ({ ...f, category: v }))}
           clearable
           searchable
-          creatable
-          getCreateLabel={q => `+ "${q}" aanmaken`}
-          onCreate={q => { setForm(f => ({ ...f, category: q })); return q; }}
         />
         <NumberInput
           label="Aantal"

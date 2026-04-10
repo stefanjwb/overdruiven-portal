@@ -99,7 +99,7 @@ export default function AdminUsers() {
             <Table.Tbody>
               {paginated.map(u => { const r=ROLES[u.role]||ROLES.user; const I=r.icon; return (
                 <Table.Tr key={u.id}>
-                  <Table.Td><Group gap="sm"><Avatar size={34} radius="xl" color={r.color}>{[u.first_name, u.last_name].filter(Boolean).map((n: string) => n[0].toUpperCase()).join('') || u.username.slice(0,2).toUpperCase()}</Avatar><div><Text size="sm" fw={500}>{u.first_name ? u.first_name.charAt(0).toUpperCase() + u.first_name.slice(1) : u.username}</Text>{u.username===me?.username&&<Text size="xs" c="dimmed">Jij</Text>}</div></Group></Table.Td>
+                  <Table.Td><Group gap="sm"><Avatar size={34} radius="xl" color={r.color}>{[u.first_name, u.last_name].filter((n): n is string => Boolean(n)).map(n => n[0].toUpperCase()).join('') || u.username.slice(0,2).toUpperCase()}</Avatar><div><Text size="sm" fw={500}>{u.first_name ? u.first_name.charAt(0).toUpperCase() + u.first_name.slice(1) : u.username}</Text>{u.username===me?.username&&<Text size="xs" c="dimmed">Jij</Text>}</div></Group></Table.Td>
                   <Table.Td><Text size="sm" c="dimmed">{u.email}</Text></Table.Td>
                   <Table.Td><Badge color={r.color} variant="light" leftSection={<I size={12}/>}>{r.label}</Badge></Table.Td>
                   <Table.Td ta="right">{u.username!==me?.username?(<Group gap={4} justify="flex-end"><Tooltip label="Bewerken"><ActionIcon variant="light" color="brand" onClick={()=>openEdit(u)}><IconEdit size={16}/></ActionIcon></Tooltip>{u.username!=='admin'&&<Tooltip label="Verwijderen"><ActionIcon variant="light" color="red" onClick={()=>setDeleteTarget(u)}><IconTrash size={16}/></ActionIcon></Tooltip>}</Group>):null}</Table.Td>
@@ -116,7 +116,7 @@ export default function AdminUsers() {
             <div key={u.id} style={{ border: '1px solid var(--mantine-color-default-border)', borderRadius: 8, padding: '10px 12px' }}>
               <Group justify="space-between" align="center" wrap="nowrap">
                 <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
-                  <Avatar size={36} radius="xl" color={r.color} style={{ flexShrink: 0 }}>{[u.first_name, u.last_name].filter(Boolean).map((n: string) => n[0].toUpperCase()).join('') || u.username.slice(0,2).toUpperCase()}</Avatar>
+                  <Avatar size={36} radius="xl" color={r.color} style={{ flexShrink: 0 }}>{[u.first_name, u.last_name].filter((n): n is string => Boolean(n)).map(n => n[0].toUpperCase()).join('') || u.username.slice(0,2).toUpperCase()}</Avatar>
                   <div style={{ minWidth: 0 }}>
                     <Group gap="xs" wrap="wrap">
                       <Text size="sm" fw={600} style={{ wordBreak: 'break-word' }}>{u.first_name ? u.first_name.charAt(0).toUpperCase() + u.first_name.slice(1) : u.username}</Text>

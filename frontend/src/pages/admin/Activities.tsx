@@ -117,7 +117,7 @@ function ActivityForm({ form, setForm, organizers, showCalendarOption = false }:
       )}
       <Switch label="Publiek zichtbaar" checked={form.is_public} onChange={e=>setForm(f=>({...f,is_public:e.currentTarget.checked}))} color="brand" />
       {showCalendarOption && (
-        <Switch label="Toevoegen aan Google Agenda" checked={form.add_to_calendar} onChange={e=>setForm(f=>({...f,add_to_calendar:e.currentTarget.checked}))} color="brand" leftSection={<IconCalendar size={16}/>} />
+        <Switch label="Toevoegen aan Google Agenda" checked={form.add_to_calendar} onChange={e=>setForm(f=>({...f,add_to_calendar:e.currentTarget.checked}))} color="brand" />
       )}
     </Stack>
   );
