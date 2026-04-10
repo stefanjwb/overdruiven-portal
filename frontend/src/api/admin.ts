@@ -16,6 +16,8 @@ export const createActivity = async (data: Record<string, any>) => (await api.po
 export const updateActivity = async (id: number, data: Record<string, any>) => (await api.put(`/activities/${id}`, data)).data;
 export const deleteActivity = async (id: number) => api.delete(`/activities/${id}`);
 
+export const adminAddSignup      = async (activityId: number, userId: number) => (await api.post(`/admin/signups/${activityId}`, { user_id: userId })).data;
+
 export const getStatistics       = async (): Promise<any[]> => (await api.get('/admin/statistics')).data;
 
 export const getInventory        = async (): Promise<any[]> => (await api.get('/inventory/')).data;

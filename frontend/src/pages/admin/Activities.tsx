@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Title, Text, Group, Badge, Paper, Table, Center, Loader, TextInput, Progress, Button, Modal, Stack, Textarea, NumberInput, Select, Switch, ActionIcon, Tooltip, Tabs, Pagination } from '@mantine/core';
+import { Title, Text, Group, Badge, Paper, Table, Center, Loader, TextInput, Progress, Button, Modal, Stack, Textarea, NumberInput, Select, Switch, ActionIcon, Tooltip, Tabs, Pagination, Anchor } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useDebouncedValue } from '@mantine/hooks';
 import { usePagination } from '../../hooks/usePagination';
 import { notifications } from '@mantine/notifications';
-import { IconSearch, IconCalendar, IconCalendarEvent, IconClockHour4, IconUsers, IconPlus, IconEdit, IconTrash, IconAlertTriangle, IconBottle } from '@tabler/icons-react';
-import { getAdminActivities, getOrganizers, createActivity, updateActivity, deleteActivity } from '../../api/admin';
+import { IconSearch, IconCalendar, IconCalendarEvent, IconClockHour4, IconUsers, IconPlus, IconEdit, IconTrash, IconAlertTriangle, IconBottle, IconUserPlus } from '@tabler/icons-react';
+import { getAdminActivities, getOrganizers, createActivity, updateActivity, deleteActivity, adminAddSignup, getUsers } from '../../api/admin';
 import { useAuth } from '../../context/AuthContext';
 import WinesModal from './Wines';
+import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import 'dayjs/locale/nl';
 
@@ -125,6 +126,7 @@ function ActivityForm({ form, setForm, organizers, showCalendarOption = false }:
 
 export default function AdminActivities() {
   const { isAdmin } = useAuth();
+  const navigate = useNavigate();
   const [acts, setActs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -143,6 +145,11 @@ export default function AdminActivities() {
   const [deleting, setDeleting] = useState(false);
   const [winesTarget, setWinesTarget] = useState<any | null>(null);
 
+  const [addUserTarget, setAddUserTarget] = useState<any | null>(null);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [addingUser, setAddingUser] = useState(false);
+
   const load = () => {
     setLoading(true);
     getAdminActivities().then(setActs).catch(()=>{}).finally(()=>setLoading(false));
@@ -151,6 +158,7 @@ export default function AdminActivities() {
   useEffect(() => {
     load();
     getOrganizers().then(setOrganizers).catch(()=>{});
+    getUsers().then(setAllUsers).catch(()=>{});
   }, []);
 
   const upcoming = useMemo(() => acts.filter(a => !a.is_past), [acts]);
@@ -224,6 +232,26 @@ export default function AdminActivities() {
     }
   };
 
+  const openAddUser = (a: any) => {
+    setAddUserTarget(a);
+    setSelectedUserId(null);
+  };
+
+  const handleAddUser = async () => {
+    if (!selectedUserId) return;
+    setAddingUser(true);
+    try {
+      await adminAddSignup(addUserTarget.id, Number(selectedUserId));
+      notifications.show({ message: 'Gebruiker toegevoegd aan activiteit!', color: 'green' });
+      setAddUserTarget(null);
+      load();
+    } catch (e: any) {
+      notifications.show({ message: e?.response?.data?.detail ?? 'Fout bij toevoegen.', color: 'red' });
+    } finally {
+      setAddingUser(false);
+    }
+  };
+
   if (loading) return <Center py={80}><Loader color="brand" type="dots"/></Center>;
 
   return (
@@ -269,7 +297,7 @@ export default function AdminActivities() {
                         const pct = a.max_participants ? Math.min(100,Math.round((a.signups_count/a.max_participants)*100)) : null;
                         return (
                           <Table.Tr key={a.id}>
-                            <Table.Td><Text size="sm" fw={500}>{a.name}</Text></Table.Td>
+                            <Table.Td><Anchor size="sm" fw={500} onClick={()=>navigate(`/activiteiten/${a.id}`)} style={{cursor:'pointer'}}>{a.name}</Anchor></Table.Td>
                             <Table.Td><Text size="sm" c="dimmed">{dayjs(a.date).format('DD MMM YYYY')}</Text></Table.Td>
                             <Table.Td style={{width:130}}>
                               <Group gap={4}><IconUsers size={13} color="gray"/><Text size="xs" fw={600}>{a.signups_count}{a.max_participants?` / ${a.max_participants}`:''}</Text></Group>
@@ -278,6 +306,7 @@ export default function AdminActivities() {
                             <Table.Td ta="right">
                               <Group gap="xs" justify="flex-end">
                                 <Tooltip label="Wijnen"><ActionIcon variant="light" color="grape" onClick={()=>setWinesTarget(a)}><IconBottle size={16}/></ActionIcon></Tooltip>
+                                <Tooltip label="Deelnemer toevoegen"><ActionIcon variant="light" color="teal" onClick={()=>openAddUser(a)}><IconUserPlus size={16}/></ActionIcon></Tooltip>
                                 <Tooltip label="Bewerken"><ActionIcon variant="light" color="brand" onClick={()=>openEdit(a)}><IconEdit size={16}/></ActionIcon></Tooltip>
                                 {isAdmin && <Tooltip label="Verwijderen"><ActionIcon variant="light" color="red" onClick={()=>setDeleteTarget(a)}><IconTrash size={16}/></ActionIcon></Tooltip>}
                               </Group>
@@ -299,7 +328,7 @@ export default function AdminActivities() {
                       <div key={a.id} style={{ border: '1px solid var(--mantine-color-default-border)', borderRadius: 8, padding: '10px 12px' }}>
                         <Group justify="space-between" wrap="nowrap" align="flex-start">
                           <div style={{ minWidth: 0 }}>
-                            <Text size="sm" fw={600}>{a.name}</Text>
+                            <Anchor size="sm" fw={600} onClick={()=>navigate(`/activiteiten/${a.id}`)} style={{cursor:'pointer'}}>{a.name}</Anchor>
                             <Text size="xs" c="dimmed">{dayjs(a.date).format('DD MMM YYYY')}</Text>
                             <Group gap={4} mt={4}>
                               <IconUsers size={13} color="gray"/>
@@ -309,6 +338,7 @@ export default function AdminActivities() {
                           </div>
                           <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
                             <ActionIcon variant="light" color="grape" size="sm" onClick={()=>setWinesTarget(a)}><IconBottle size={14}/></ActionIcon>
+                            <ActionIcon variant="light" color="teal" size="sm" onClick={()=>openAddUser(a)}><IconUserPlus size={14}/></ActionIcon>
                             <ActionIcon variant="light" color="brand" size="sm" onClick={()=>openEdit(a)}><IconEdit size={14}/></ActionIcon>
                             {isAdmin && <ActionIcon variant="light" color="red" size="sm" onClick={()=>setDeleteTarget(a)}><IconTrash size={14}/></ActionIcon>}
                           </Group>
@@ -355,6 +385,26 @@ export default function AdminActivities() {
         activityId={winesTarget?.id ?? 0}
         activityName={winesTarget?.name ?? ''}
       />
+
+      <Modal opened={!!addUserTarget} onClose={()=>setAddUserTarget(null)} title="Deelnemer toevoegen" size="sm">
+        {addUserTarget && (
+          <Stack gap="md">
+            <Text size="sm" c="dimmed">Voeg een lid toe aan <strong>{addUserTarget.name}</strong>. Bij een activiteit met kosten wordt de betaling automatisch als voldaan gemarkeerd.</Text>
+            <Select
+              label="Lid"
+              placeholder="Selecteer een lid"
+              searchable
+              data={allUsers.map((u: any) => ({ value: String(u.id), label: u.username }))}
+              value={selectedUserId}
+              onChange={setSelectedUserId}
+            />
+            <Group justify="flex-end">
+              <Button variant="default" onClick={()=>setAddUserTarget(null)}>Annuleren</Button>
+              <Button color="teal" loading={addingUser} disabled={!selectedUserId} onClick={handleAddUser}>Toevoegen</Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
 
       <Modal opened={!!editTarget} onClose={()=>setEditTarget(null)} title="Activiteit bewerken" size="lg">
         <ActivityForm form={editForm} setForm={setEditForm} organizers={organizers} />

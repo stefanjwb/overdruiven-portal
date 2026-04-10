@@ -2,6 +2,7 @@ import secrets
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlmodel import Session, select, func
 
 from app.core.database import get_session
@@ -247,6 +248,60 @@ def admin_statistics(
             "net": round(income_paid - expenses, 2),
         })
     return result
+
+
+class AdminSignupRequest(BaseModel):
+    user_id: int
+
+
+@router.post("/signups/{activity_id}", status_code=201)
+def admin_add_signup(
+    activity_id: int,
+    data: AdminSignupRequest,
+    current_user: User = Depends(require_admin),
+    session: Session = Depends(get_session),
+):
+    """Voeg een gebruiker hard toe aan een activiteit, zonder betaalcheck."""
+    activity = session.get(Activity, activity_id)
+    if not activity:
+        raise HTTPException(404, "Activiteit niet gevonden.")
+
+    user = session.get(User, data.user_id)
+    if not user:
+        raise HTTPException(404, "Gebruiker niet gevonden.")
+
+    existing = session.exec(
+        select(Signup).where(
+            Signup.activity_id == activity_id,
+            Signup.participant_name == user.username,
+        )
+    ).first()
+    if existing:
+        raise HTTPException(400, f"{user.username} is al aangemeld voor deze activiteit.")
+
+    signup = Signup(activity_id=activity_id, participant_name=user.username)
+    signup.set_guest_names([])
+    session.add(signup)
+
+    if activity.cost:
+        existing_payment = session.exec(
+            select(Payment).where(
+                Payment.activity_id == activity_id,
+                Payment.user_id == user.id,
+            )
+        ).first()
+        if not existing_payment:
+            payment = Payment(
+                user_id=user.id,
+                activity_id=activity_id,
+                status="paid",
+                guests=0,
+                approved_amount=activity.cost,
+            )
+            session.add(payment)
+
+    session.commit()
+    return {"message": f"{user.username} is toegevoegd aan {activity.name}."}
 
 
 @router.get("/activities")
