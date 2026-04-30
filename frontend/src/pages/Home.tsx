@@ -4,18 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import {
   Container, Title, Text, SimpleGrid, Card, Group, Badge, Button,
   Stack, Divider, Center, Loader, Image, Modal, ActionIcon, Tooltip,
-  TextInput, Textarea, Paper,
 } from '@mantine/core';
-import { useForm } from '@mantine/form';
 import { Carousel } from '@mantine/carousel';
 import {
   IconCalendarEvent, IconMapPin, IconClock,
-  IconUsers, IconLock, IconArrowRight, IconGlassFull, IconCamera, IconMail,
+  IconUsers, IconLock, IconArrowRight, IconGlassFull, IconCamera,
 } from '@tabler/icons-react';
-import { notifications } from '@mantine/notifications';
 
 import { useAuth } from '../context/AuthContext';
-import { getUpcomingActivities, getPublicActivities, getMySignups, sendContactForm } from '../api/activities';
+import { getUpcomingActivities, getPublicActivities, getMySignups } from '../api/activities';
 import { getHomepageWines } from '../api/wines';
 import dayjs from 'dayjs';
 import 'dayjs/locale/nl';
@@ -218,16 +215,6 @@ export default function Home() {
   const [actsLoading, setActsLoading] = useState(false);
   const [signedUpIds, setSignedUpIds] = useState<number[]>([]);
   const [homepageWines, setHomepageWines] = useState<any[]>([]);
-  const [contactSending, setContactSending] = useState(false);
-  const [contactSent, setContactSent] = useState(false);
-
-  const contactForm = useForm({
-    initialValues: { name: '', email: '', message: '', website: '' },
-    validate: {
-      name: (v) => (v.trim() ? null : 'Vul je naam in'),
-      email: (v) => (/^\S+@\S+\.\S+$/.test(v) ? null : 'Vul een geldig e-mailadres in'),
-    },
-  });
 
   const loadActivities = useCallback(() => {
     setActsLoading(true);
@@ -326,55 +313,6 @@ export default function Home() {
           </SimpleGrid>
         )}
 
-        {/* Contactformulier */}
-        <Divider my="xl" />
-        <Center>
-          <Paper withBorder radius="md" p="xl" w={{ base: '100%', sm: 480 }}>
-            <Group gap="sm" mb="md">
-              <IconMail size={22} color="var(--mantine-color-brand-6)" />
-              <Title order={3}>Lid worden?</Title>
-            </Group>
-            <Text size="sm" c="dimmed" mb="lg">
-              Stuur ons een berichtje en we nemen zo snel mogelijk contact met je op.
-            </Text>
-
-            {contactSent ? (
-              <Text c="green" fw={500} ta="center" py="md">
-                Bedankt! We nemen zo snel mogelijk contact met je op.
-              </Text>
-            ) : (
-              <form onSubmit={contactForm.onSubmit(async (values) => {
-                setContactSending(true);
-                try {
-                  await sendContactForm(values);
-                  setContactSent(true);
-                  contactForm.reset();
-                } catch {
-                  notifications.show({ message: 'Er ging iets mis. Probeer het later opnieuw.', color: 'red' });
-                } finally {
-                  setContactSending(false);
-                }
-              })}>
-                <Stack gap="sm">
-                  <TextInput label="Naam" placeholder="Jan de Vries" withAsterisk {...contactForm.getInputProps('name')} />
-                  <TextInput label="E-mailadres" placeholder="jan@voorbeeld.nl" withAsterisk {...contactForm.getInputProps('email')} />
-                  <Textarea label="Bericht" placeholder="Vertel iets over jezelf..." autosize minRows={3} {...contactForm.getInputProps('message')} />
-                  {/* Honeypot — verborgen voor echte gebruikers */}
-                  <input
-                    type="text"
-                    tabIndex={-1}
-                    autoComplete="off"
-                    style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }}
-                    {...contactForm.getInputProps('website')}
-                  />
-                  <Button type="submit" color="brand" loading={contactSending} fullWidth mt="xs">
-                    Versturen
-                  </Button>
-                </Stack>
-              </form>
-            )}
-          </Paper>
-        </Center>
       </Container>
     </div>
   );
