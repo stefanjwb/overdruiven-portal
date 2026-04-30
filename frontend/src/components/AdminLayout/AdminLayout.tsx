@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { notifications } from '@mantine/notifications';
 import { useState, useEffect } from 'react';
 import { getAdminPayments } from '../../api/admin';
+import { getAdminDeclarations } from '../../api/declarations';
 import logoVolledig from '../../assets/logo-volledig.png';
 import classes from './AdminLayout.module.css';
 
@@ -20,9 +21,11 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const loc = useLocation();
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingDeclarations, setPendingDeclarations] = useState(0);
 
   useEffect(() => {
     getAdminPayments().then(p => setPendingCount(p.filter((p: any) => p.status === 'pending_verification').length)).catch(() => {});
+    getAdminDeclarations().then(d => setPendingDeclarations(d.filter((d: any) => d.status === 'pending').length)).catch(() => {});
   }, [loc.pathname]);
 
   const doLogout = () => {
@@ -94,9 +97,14 @@ export default function AdminLayout() {
             active={loc.pathname === '/admin/betalingen/historie'}
             onClick={() => go('/admin/betalingen/historie')} color="brand" />
 
-          <NavLink label="Declaraties" leftSection={<IconReceipt size={18} />}
+          <NavLink
+            label="Declaraties"
+            leftSection={<IconReceipt size={18} />}
+            rightSection={pendingDeclarations > 0 ? <Badge size="xs" color="red" circle>{pendingDeclarations}</Badge> : null}
             active={loc.pathname === '/admin/declaraties'}
-            onClick={() => go('/admin/declaraties')} color="brand" />
+            onClick={() => go('/admin/declaraties')}
+            color="brand"
+          />
 
           <Text className={classes.sectionLabel} mt="md">Club</Text>
 
