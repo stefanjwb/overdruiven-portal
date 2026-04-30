@@ -1,6 +1,6 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
-  AppShell, Burger, Group, Text, NavLink, Avatar, UnstyledButton, Box,
+  AppShell, Burger, Group, Text, NavLink, Avatar, UnstyledButton, Box, Badge,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -9,6 +9,8 @@ import {
 } from '@tabler/icons-react';
 import { useAuth } from '../../context/AuthContext';
 import { notifications } from '@mantine/notifications';
+import { useState, useEffect } from 'react';
+import { getAdminPayments } from '../../api/admin';
 import logoVolledig from '../../assets/logo-volledig.png';
 import classes from './AdminLayout.module.css';
 
@@ -17,6 +19,11 @@ export default function AdminLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const loc = useLocation();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    getAdminPayments().then(p => setPendingCount(p.filter((p: any) => p.status === 'pending_verification').length)).catch(() => {});
+  }, [loc.pathname]);
 
   const doLogout = () => {
     logout();
@@ -74,9 +81,14 @@ export default function AdminLayout() {
 
           <Text className={classes.sectionLabel} mt="md">Betalingen</Text>
 
-          <NavLink label="Openstaand" leftSection={<IconCreditCard size={18} />}
+          <NavLink
+            label="Openstaand"
+            leftSection={<IconCreditCard size={18} />}
+            rightSection={pendingCount > 0 ? <Badge size="xs" color="red" circle>{pendingCount}</Badge> : null}
             active={loc.pathname === '/admin/betalingen'}
-            onClick={() => go('/admin/betalingen')} color="brand" />
+            onClick={() => go('/admin/betalingen')}
+            color="brand"
+          />
 
           <NavLink label="Historie" leftSection={<IconHistory size={18} />}
             active={loc.pathname === '/admin/betalingen/historie'}

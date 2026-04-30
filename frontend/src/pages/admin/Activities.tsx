@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Title, Text, Group, Badge, Paper, Table, Center, Loader, TextInput, Progress, Button, Modal, Stack, Textarea, NumberInput, Select, Switch, ActionIcon, Tooltip, Tabs, Pagination, Anchor } from '@mantine/core';
+import { Title, Text, Group, Badge, Paper, Table, Center, Loader, TextInput, Progress, Button, Modal, Stack, Textarea, NumberInput, Select, Switch, ActionIcon, Tooltip, Tabs, Pagination, Anchor, Divider } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useDebouncedValue } from '@mantine/hooks';
 import { usePagination } from '../../hooks/usePagination';
 import { notifications } from '@mantine/notifications';
-import { IconSearch, IconCalendar, IconCalendarEvent, IconClockHour4, IconUsers, IconPlus, IconEdit, IconTrash, IconAlertTriangle, IconBottle, IconUserPlus } from '@tabler/icons-react';
-import { getAdminActivities, getOrganizers, createActivity, updateActivity, deleteActivity, adminAddSignup, getUsers } from '../../api/admin';
+import { IconSearch, IconCalendarEvent, IconClockHour4, IconUsers, IconPlus, IconEdit, IconTrash, IconAlertTriangle, IconBottle, IconUserMinus, IconX } from '@tabler/icons-react';
+import { getAdminActivities, getOrganizers, createActivity, updateActivity, deleteActivity, adminAddSignup, adminDeleteSignup, adminDeleteGuest, getActivitySignups, getUsers } from '../../api/admin';
 import { useAuth } from '../../context/AuthContext';
 import WinesModal from './Wines';
 import { useNavigate } from 'react-router-dom';
@@ -132,6 +132,7 @@ export default function AdminActivities() {
   const [search, setSearch] = useState('');
   const [debouncedSearch] = useDebouncedValue(search, 200);
   const [organizers, setOrganizers] = useState<{id: number; username: string}[]>([]);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState<FormState>(emptyForm);
@@ -145,8 +146,12 @@ export default function AdminActivities() {
   const [deleting, setDeleting] = useState(false);
   const [winesTarget, setWinesTarget] = useState<any | null>(null);
 
-  const [addUserTarget, setAddUserTarget] = useState<any | null>(null);
-  const [allUsers, setAllUsers] = useState<any[]>([]);
+  // Gecombineerde deelnemers modal
+  const [membersTarget, setMembersTarget] = useState<any | null>(null);
+  const [signups, setSignups] = useState<any[]>([]);
+  const [signupsLoading, setSignupsLoading] = useState(false);
+  const [deletingSignupId, setDeletingSignupId] = useState<number | null>(null);
+  const [deletingGuest, setDeletingGuest] = useState<{ signupId: number; index: number } | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [addingUser, setAddingUser] = useState(false);
 
@@ -161,13 +166,9 @@ export default function AdminActivities() {
     getUsers().then(setAllUsers).catch(()=>{});
   }, []);
 
-  const upcoming = useMemo(() => acts.filter(a => !a.is_past), [acts]);
-  const past = useMemo(() => acts.filter(a => a.is_past), [acts]);
-
   const filtered = useMemo(() => {
-    const base = acts;
-    if (!debouncedSearch.trim()) return base;
-    return base.filter(a => a.name.toLowerCase().includes(debouncedSearch.toLowerCase()));
+    if (!debouncedSearch.trim()) return acts;
+    return acts.filter(a => a.name.toLowerCase().includes(debouncedSearch.toLowerCase()));
   }, [acts, debouncedSearch]);
 
   const filteredUpcoming = useMemo(() => filtered.filter(a => !a.is_past), [filtered]);
@@ -232,19 +233,56 @@ export default function AdminActivities() {
     }
   };
 
-  const openAddUser = (a: any) => {
-    setAddUserTarget(a);
+  const openMembers = (a: any) => {
+    setMembersTarget(a);
     setSelectedUserId(null);
+    setSignupsLoading(true);
+    getActivitySignups(a.id).then(setSignups).catch(()=>setSignups([])).finally(()=>setSignupsLoading(false));
+  };
+
+  const handleDeleteSignup = async (signupId: number) => {
+    setDeletingSignupId(signupId);
+    try {
+      await adminDeleteSignup(signupId);
+      setSignups(prev => prev.filter(s => s.id !== signupId));
+      load();
+      notifications.show({ message: 'Deelnemer verwijderd van activiteit.', color: 'green' });
+    } catch {
+      notifications.show({ message: 'Fout bij verwijderen van deelnemer.', color: 'red' });
+    } finally {
+      setDeletingSignupId(null);
+    }
+  };
+
+  const handleDeleteGuest = async (signupId: number, guestIndex: number) => {
+    setDeletingGuest({ signupId, index: guestIndex });
+    try {
+      await adminDeleteGuest(signupId, guestIndex);
+      setSignups(prev => prev.map(s => {
+        if (s.id !== signupId) return s;
+        const names = [...(s.guest_names ?? [])];
+        names.splice(guestIndex, 1);
+        return { ...s, guests: names.length, guest_names: names };
+      }));
+      load();
+      notifications.show({ message: 'Gast verwijderd.', color: 'green' });
+    } catch {
+      notifications.show({ message: 'Fout bij verwijderen van gast.', color: 'red' });
+    } finally {
+      setDeletingGuest(null);
+    }
   };
 
   const handleAddUser = async () => {
     if (!selectedUserId) return;
     setAddingUser(true);
     try {
-      await adminAddSignup(addUserTarget.id, Number(selectedUserId));
+      await adminAddSignup(membersTarget.id, Number(selectedUserId));
       notifications.show({ message: 'Gebruiker toegevoegd aan activiteit!', color: 'green' });
-      setAddUserTarget(null);
+      setSelectedUserId(null);
       load();
+      // Ververs deelnemerslijst
+      getActivitySignups(membersTarget.id).then(setSignups).catch(()=>{});
     } catch (e: any) {
       notifications.show({ message: e?.response?.data?.detail ?? 'Fout bij toevoegen.', color: 'red' });
     } finally {
@@ -306,7 +344,7 @@ export default function AdminActivities() {
                             <Table.Td ta="right">
                               <Group gap="xs" justify="flex-end">
                                 <Tooltip label="Wijnen"><ActionIcon variant="light" color="grape" onClick={()=>setWinesTarget(a)}><IconBottle size={16}/></ActionIcon></Tooltip>
-                                <Tooltip label="Deelnemer toevoegen"><ActionIcon variant="light" color="teal" onClick={()=>openAddUser(a)}><IconUserPlus size={16}/></ActionIcon></Tooltip>
+                                <Tooltip label="Deelnemers"><ActionIcon variant="light" color="teal" onClick={()=>openMembers(a)}><IconUsers size={16}/></ActionIcon></Tooltip>
                                 <Tooltip label="Bewerken"><ActionIcon variant="light" color="brand" onClick={()=>openEdit(a)}><IconEdit size={16}/></ActionIcon></Tooltip>
                                 {isAdmin && <Tooltip label="Verwijderen"><ActionIcon variant="light" color="red" onClick={()=>setDeleteTarget(a)}><IconTrash size={16}/></ActionIcon></Tooltip>}
                               </Group>
@@ -338,7 +376,7 @@ export default function AdminActivities() {
                           </div>
                           <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
                             <ActionIcon variant="light" color="grape" size="sm" onClick={()=>setWinesTarget(a)}><IconBottle size={14}/></ActionIcon>
-                            <ActionIcon variant="light" color="teal" size="sm" onClick={()=>openAddUser(a)}><IconUserPlus size={14}/></ActionIcon>
+                            <ActionIcon variant="light" color="teal" size="sm" onClick={()=>openMembers(a)}><IconUsers size={14}/></ActionIcon>
                             <ActionIcon variant="light" color="brand" size="sm" onClick={()=>openEdit(a)}><IconEdit size={14}/></ActionIcon>
                             {isAdmin && <ActionIcon variant="light" color="red" size="sm" onClick={()=>setDeleteTarget(a)}><IconTrash size={14}/></ActionIcon>}
                           </Group>
@@ -359,6 +397,7 @@ export default function AdminActivities() {
         </Tabs>
       </Paper>
 
+      {/* Nieuwe activiteit */}
       <Modal opened={createOpen} onClose={()=>{setCreateOpen(false);setCreateForm(emptyForm);}} title="Nieuwe activiteit" size="lg">
         <ActivityForm form={createForm} setForm={setCreateForm} organizers={organizers} showCalendarOption />
         <Group justify="flex-end" mt="md">
@@ -367,6 +406,7 @@ export default function AdminActivities() {
         </Group>
       </Modal>
 
+      {/* Activiteit verwijderen */}
       <Modal opened={!!deleteTarget} onClose={()=>setDeleteTarget(null)} title={<Group gap="sm"><IconAlertTriangle size={20} color="var(--mantine-color-red-6)"/><Text fw={700}>Verwijderen</Text></Group>} size="sm">
         {deleteTarget && (
           <Stack gap="md">
@@ -379,6 +419,7 @@ export default function AdminActivities() {
         )}
       </Modal>
 
+      {/* Wijnen */}
       <WinesModal
         opened={!!winesTarget}
         onClose={() => setWinesTarget(null)}
@@ -386,26 +427,76 @@ export default function AdminActivities() {
         activityName={winesTarget?.name ?? ''}
       />
 
-      <Modal opened={!!addUserTarget} onClose={()=>setAddUserTarget(null)} title="Deelnemer toevoegen" size="sm">
-        {addUserTarget && (
-          <Stack gap="md">
-            <Text size="sm" c="dimmed">Voeg een lid toe aan <strong>{addUserTarget.name}</strong>. Bij een activiteit met kosten wordt de betaling automatisch als voldaan gemarkeerd.</Text>
+      {/* Gecombineerde deelnemers modal */}
+      <Modal
+        opened={!!membersTarget}
+        onClose={()=>setMembersTarget(null)}
+        title={<Group gap="xs"><IconUsers size={18}/><Text fw={600}>Deelnemers — {membersTarget?.name ?? ''}</Text></Group>}
+        size="md"
+      >
+        <Stack gap="md">
+          {/* Deelnemerslijst */}
+          {signupsLoading ? (
+            <Center py="md"><Loader color="brand" type="dots" /></Center>
+          ) : signups.length === 0 ? (
+            <Text c="dimmed" ta="center" size="sm">Nog geen aanmeldingen.</Text>
+          ) : (
+            <Stack gap="xs">
+              {signups.map(s => (
+                <div key={s.id} style={{ border: '1px solid var(--mantine-color-default-border)', borderRadius: 8, overflow: 'hidden' }}>
+                  {/* Hoofddeelnemer */}
+                  <Group justify="space-between" wrap="nowrap" px="sm" py={8} style={{ background: 'var(--mantine-color-default-hover)' }}>
+                    <Text size="sm" fw={600}>{s.participant_name}</Text>
+                    <Tooltip label="Verwijder van activiteit">
+                      <ActionIcon variant="subtle" color="red" size="sm" loading={deletingSignupId === s.id} onClick={()=>handleDeleteSignup(s.id)}>
+                        <IconUserMinus size={15} />
+                      </ActionIcon>
+                    </Tooltip>
+                  </Group>
+                  {/* Gasten */}
+                  {(s.guest_names ?? []).map((name: string, i: number) => (
+                    <Group key={i} justify="space-between" wrap="nowrap" px="sm" py={6} style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
+                      <Text size="xs" c="dimmed">↳ {name}</Text>
+                      <Tooltip label="Gast verwijderen">
+                        <ActionIcon
+                          variant="subtle"
+                          color="red"
+                          size="sm"
+                          loading={deletingGuest?.signupId === s.id && deletingGuest?.index === i}
+                          onClick={()=>handleDeleteGuest(s.id, i)}
+                        >
+                          <IconX size={13} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
+                  ))}
+                </div>
+              ))}
+            </Stack>
+          )}
+
+          <Divider label="Deelnemer toevoegen" labelPosition="center" />
+
+          {/* Deelnemer toevoegen */}
+          <Text size="xs" c="dimmed">Bij een activiteit met kosten wordt de betaling automatisch als voldaan gemarkeerd.</Text>
+          <Group gap="sm" align="flex-end">
             <Select
               label="Lid"
               placeholder="Selecteer een lid"
               searchable
+              style={{ flex: 1 }}
               data={allUsers.map((u: any) => ({ value: String(u.id), label: u.username }))}
               value={selectedUserId}
               onChange={setSelectedUserId}
             />
-            <Group justify="flex-end">
-              <Button variant="default" onClick={()=>setAddUserTarget(null)}>Annuleren</Button>
-              <Button color="teal" loading={addingUser} disabled={!selectedUserId} onClick={handleAddUser}>Toevoegen</Button>
-            </Group>
-          </Stack>
-        )}
+            <Button color="teal" loading={addingUser} disabled={!selectedUserId} onClick={handleAddUser} mb={1}>
+              Toevoegen
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
 
+      {/* Activiteit bewerken */}
       <Modal opened={!!editTarget} onClose={()=>setEditTarget(null)} title="Activiteit bewerken" size="lg">
         <ActivityForm form={editForm} setForm={setEditForm} organizers={organizers} />
         <Group justify="flex-end" mt="md">

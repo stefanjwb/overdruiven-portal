@@ -121,3 +121,26 @@ def delete_signup(
     session.delete(signup)
     session.commit()
     return {"message": f"Aanmelding van {name} verwijderd."}
+
+
+@router.delete("/{signup_id}/guests/{guest_index}")
+def delete_guest(
+    signup_id: int,
+    guest_index: int,
+    current_user: User = Depends(require_admin),
+    session: Session = Depends(get_session),
+):
+    """Verwijder een specifieke gast uit een aanmelding (admin only)."""
+    signup = session.get(Signup, signup_id)
+    if not signup:
+        raise HTTPException(404, "Aanmelding niet gevonden.")
+
+    names = signup.get_guest_names()
+    if guest_index < 0 or guest_index >= len(names):
+        raise HTTPException(404, "Gast niet gevonden.")
+
+    removed = names.pop(guest_index)
+    signup.set_guest_names(names)
+    session.add(signup)
+    session.commit()
+    return {"message": f"Gast '{removed}' verwijderd."}

@@ -40,5 +40,8 @@ def public_home(session: Session = Depends(get_session)):
 @limiter.limit("5/10minute")
 def contact(request: Request, data: ContactRequest):
     """Verstuur een lidmaatschapsaanvraag per e-mail."""
+    # Honeypot: als het verborgen veld ingevuld is, is het een bot — stil negeren
+    if data.website:
+        return {"message": "Bedankt voor je aanvraag! We nemen zo snel mogelijk contact met je op."}
     send_contact_email(name=data.name, email=data.email, message=data.message)
     return {"message": "Bedankt voor je aanvraag! We nemen zo snel mogelijk contact met je op."}
