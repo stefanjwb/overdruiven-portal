@@ -96,9 +96,14 @@ def get_signups(
                 )
             ).first()
 
+        if user and user.first_name:
+            display_name = user.first_name.strip().capitalize()
+        else:
+            display_name = s.participant_name.split('.')[0].capitalize()
+
         result.append(SignupResponse(
             id=s.id,
-            participant_name=s.participant_name,
+            participant_name=display_name,
             user_id=user.id if user else None,
             payment_status=payment.status if payment else None,
             payment_id=payment.id if payment else None,
