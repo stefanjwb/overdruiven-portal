@@ -24,3 +24,4 @@ class ContactRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     email: EmailStr
     message: Optional[str] = Field(default=None, max_length=2000)
+    website: Optional[str] = Field(default=None)  # honeypot — moet leeg blijven

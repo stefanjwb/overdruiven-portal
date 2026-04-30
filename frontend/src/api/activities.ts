@@ -20,3 +20,6 @@ export const signupForActivity = async (activityId: number, guestNames: string[]
 
 export const cancelSignup = async (activityId: number): Promise<void> =>
   api.delete(`/signups/me/${activityId}`);
+
+export const sendContactForm = async (data: { name: string; email: string; message: string; website: string }): Promise<void> =>
+  api.post('/public/contact', data);
