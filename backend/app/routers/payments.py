@@ -22,6 +22,8 @@ limiter = Limiter(key_func=get_remote_address)
 
 class ConfirmPaymentRequest(BaseModel):
     guest_names: list[str] = []
+    guest_eats: list[bool] = []
+    eats_along: bool = True
 
 
 @router.get("/info/{activity_id}")
@@ -53,6 +55,7 @@ def payment_info(
         )
     ).first()
     guest_names = signup.get_guest_names() if signup else []
+    guest_eats = signup.get_guest_eats() if signup else []
     guests = len(guest_names)
     GUEST_SURCHARGE = 5
     total_amount = round(activity.cost + guests * (activity.cost + GUEST_SURCHARGE), 2) if activity.cost else 0
@@ -64,6 +67,7 @@ def payment_info(
         "cost": activity.cost,
         "guests": guests,
         "guest_names": guest_names,
+        "guest_eats": guest_eats,
         "total_amount": total_amount,
         "status": payment.status if payment else None,
         "payment_id": payment.id if payment else None,
@@ -101,11 +105,14 @@ def confirm_payment(
             if total + 1 + guest_count > activity.max_participants:
                 raise HTTPException(400, "Er zijn niet genoeg plaatsen meer voor jou en je gasten.")
 
-        signup = Signup(activity_id=activity_id, participant_name=current_user.username)
+        signup = Signup(activity_id=activity_id, participant_name=current_user.username, eats_along=body.eats_along)
         signup.set_guest_names(body.guest_names)
+        signup.set_guest_eats(body.guest_eats)
         session.add(signup)
     else:
         existing_signup.set_guest_names(body.guest_names)
+        existing_signup.set_guest_eats(body.guest_eats)
+        existing_signup.eats_along = body.eats_along
         session.add(existing_signup)
 
     # Betalingslogica (alleen als er kosten zijn)

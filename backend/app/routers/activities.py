@@ -25,15 +25,27 @@ from app.services.calendar_service import (
 router = APIRouter()
 
 
+def _display_name(user: Optional[User]) -> Optional[str]:
+    if not user:
+        return None
+    return user.first_name.strip().capitalize() if user.first_name else user.username
+
+
 def _enrich_activity(activity: Activity, session: Session) -> ActivityResponse:
     """Voeg extra velden toe aan een ActivityResponse."""
     signups = session.exec(select(Signup).where(Signup.activity_id == activity.id)).all()
     count = sum(1 + s.guests for s in signups)
     organizer = session.get(User, activity.organizer_id) if activity.organizer_id else None
+    shopper = session.get(User, activity.shopper_id) if activity.shopper_id else None
+    cook_ids = activity.get_cook_ids()
+    cook_names = [n for n in (_display_name(session.get(User, cid)) for cid in cook_ids) if n]
     return ActivityResponse(
-        **activity.model_dump(),
+        **activity.model_dump(exclude={"cooks"}),
         signups_count=count,
         organizer_name=organizer.username if organizer else None,
+        shopper_name=_display_name(shopper),
+        cook_ids=cook_ids,
+        cook_names=cook_names,
     )
 
 
@@ -96,14 +108,21 @@ def get_signups(
                 )
             ).first()
 
+        if user and user.first_name:
+            display_name = user.first_name.strip().capitalize()
+        else:
+            display_name = s.participant_name.split('.')[0].capitalize()
+
         result.append(SignupResponse(
             id=s.id,
-            participant_name=s.participant_name,
+            participant_name=display_name,
             user_id=user.id if user else None,
             payment_status=payment.status if payment else None,
             payment_id=payment.id if payment else None,
             guests=s.guests,
             guest_names=s.get_guest_names(),
+            guest_eats=s.get_guest_eats(),
+            eats_along=s.eats_along,
         ))
     return result
 
@@ -114,7 +133,8 @@ def create_activity(
     current_user: User = Depends(require_organizer),
     session: Session = Depends(get_session),
 ):
-    activity = Activity(**data.model_dump(exclude={'add_to_calendar'}))
+    activity = Activity(**data.model_dump(exclude={'add_to_calendar', 'cook_ids'}))
+    activity.set_cook_ids(data.cook_ids)
 
     # Google Calendar
     if data.add_to_calendar:
@@ -147,6 +167,10 @@ def update_activity(
     # Alleen admins mogen de organisator wijzigen
     if not is_admin:
         update_data.pop("organizer_id", None)
+
+    cook_ids = update_data.pop("cook_ids", None)
+    if cook_ids is not None:
+        activity.set_cook_ids(cook_ids)
 
     for key, value in update_data.items():
         setattr(activity, key, value)

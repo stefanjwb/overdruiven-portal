@@ -6,3 +6,4 @@ from app.models.invitation_code import InvitationCode  # noqa: F401
 from app.models.wine import Wine, UserWineNote  # noqa: F401
 from app.models.inventory import InventoryItem  # noqa: F401
 from app.models.declaration import Declaration  # noqa: F401
+from app.models.blog import BlogPost  # noqa: F401

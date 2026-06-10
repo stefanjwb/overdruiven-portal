@@ -15,6 +15,7 @@ Een webapplicatie voor het beheren van een privé wijnclub. Leden kunnen zich aa
 **Voor organisatoren**
 - Activiteiten aanmaken en beheren, inclusief capaciteitslimiet en kosten
 - Wijnen per activiteit beheren (type, producent, oogstjaar, proefnotities, spijsadvies, foto's)
+- Blogposts schrijven en publiceren — bezoekers krijgen zo een beeld van de wijnclub
 - Google Agenda-integratie — activiteiten worden automatisch gesynchroniseerd
 
 **Voor beheerders**

@@ -9,6 +9,8 @@ class Signup(SQLModel, table=True):
     participant_name: str = Field(max_length=100)
     guests: int = Field(default=0)
     guest_names: str = Field(default="[]")  # JSON array van namen
+    eats_along: bool = Field(default=True)  # eet mee tijdens de activiteit
+    guest_eats: str = Field(default="[]")   # JSON array van booleans, zelfde volgorde als guest_names
 
     def get_guest_names(self) -> list[str]:
         try:
@@ -19,3 +21,16 @@ class Signup(SQLModel, table=True):
     def set_guest_names(self, names: list[str]) -> None:
         self.guest_names = json.dumps(names, ensure_ascii=False)
         self.guests = len(names)
+
+    def get_guest_eats(self) -> list[bool]:
+        """Eet-mee-vlag per gast, altijd even lang als guest_names (default: eet mee)."""
+        try:
+            eats = [bool(e) for e in json.loads(self.guest_eats)]
+        except Exception:
+            eats = []
+        n = self.guests
+        return (eats + [True] * n)[:n]
+
+    def set_guest_eats(self, eats: list[bool]) -> None:
+        n = self.guests
+        self.guest_eats = json.dumps((list(eats) + [True] * n)[:n])

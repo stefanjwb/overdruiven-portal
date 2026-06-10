@@ -123,7 +123,8 @@ def _cleanup_expired_invites(session) -> None:
 
 
 @router.post("/check-invite", status_code=200)
-def check_invite(data: CheckInviteRequest, session: Session = Depends(get_session)):
+@limiter.limit("10/minute")
+def check_invite(request: Request, data: CheckInviteRequest, session: Session = Depends(get_session)):
     _cleanup_expired_invites(session)
     invite = session.exec(
         select(InvitationCode).where(InvitationCode.code == data.invite_code.strip())
@@ -178,6 +179,7 @@ def verify_code(request: Request, data: VerifyCodeRequest):
     # Constant-time vergelijking om timing-aanvallen te voorkomen
     if not hmac.compare_digest(entry["code"].upper(), data.code.strip().upper()):
         raise HTTPException(400, "Onjuiste verificatiecode.")
+    entry["verified"] = True
     return {"verified": True}
 
 
@@ -189,6 +191,8 @@ def register(data: RegisterRequest, session: Session = Depends(get_session)):
     if time.time() > entry["expires_at"]:
         del _pending[data.email]
         raise HTTPException(400, "De verificatiecode is verlopen. Begin opnieuw.")
+    if not entry.get("verified"):
+        raise HTTPException(400, "Voltooi eerst de e-mailverificatie.")
 
     existing = session.exec(select(User).where(User.email == data.email)).first()
     if existing:

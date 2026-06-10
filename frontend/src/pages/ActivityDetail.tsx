@@ -3,18 +3,19 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container, Title, Text, Group, Badge, Button, Stack, Divider,
   Center, Loader, Avatar, Paper, SimpleGrid, ThemeIcon, ActionIcon,
-  CopyButton, Tooltip, Code, Alert, TextInput, Rating, Textarea,
+  CopyButton, Tooltip, Code, Alert, TextInput, Rating, Textarea, Switch, Popover,
 } from '@mantine/core';
 import {
   IconCalendarEvent, IconMapPin, IconClock, IconUsers,
   IconCurrencyEuro, IconCheck, IconArrowLeft, IconUser,
   IconCopy, IconAlertCircle, IconCircleCheck, IconHourglass,
   IconUserPlus, IconTrash, IconX, IconGlassFull,
+  IconShoppingCart, IconChefHat, IconToolsKitchen2,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useAuth } from '../context/AuthContext';
 import {
-  getActivity, getActivitySignups, getMySignups,
+  getActivity, getActivitySignups, getMySignups, updateMyEatsAlong,
 } from '../api/activities';
 import { getPaymentInfo, confirmPayment } from '../api/payments';
 import { getWinesForActivity, updatePersonalNote } from '../api/wines';
@@ -40,24 +41,35 @@ function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value
 }
 
 function GuestNamesInput({
-  guestNames, onAdd, onUpdate, onRemove,
+  guestNames, guestEats, onAdd, onUpdate, onUpdateEats, onRemove,
 }: {
   guestNames: string[];
+  guestEats: boolean[];
   onAdd: () => void;
   onUpdate: (i: number, v: string) => void;
+  onUpdateEats: (i: number, v: boolean) => void;
   onRemove?: (i: number) => void;
 }) {
   return (
     <Stack gap="xs">
       <Text size="sm" fw={500}>Gasten meenemen?</Text>
       {guestNames.map((name, i) => (
-        <Group key={i} gap="xs">
+        <Group key={i} gap="xs" wrap="nowrap">
           <TextInput
             placeholder={`Naam gast ${i + 1}`}
             value={name}
             onChange={(e) => onUpdate(i, e.currentTarget.value)}
             style={{ flex: 1 }}
           />
+          <Tooltip label={guestEats[i] ?? true ? 'Eet mee' : 'Eet niet mee'}>
+            <Switch
+              checked={guestEats[i] ?? true}
+              onChange={(e) => onUpdateEats(i, e.currentTarget.checked)}
+              color="brand"
+              size="sm"
+              thumbIcon={(guestEats[i] ?? true) ? <IconToolsKitchen2 size={10} color="var(--mantine-color-brand-6)" /> : undefined}
+            />
+          </Tooltip>
           {onRemove && (
             <ActionIcon variant="subtle" color="red" onClick={() => onRemove(i)}>
               <IconTrash size={16} />
@@ -223,6 +235,9 @@ export default function ActivityDetail() {
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   const [guestNames, setGuestNames] = useState<string[]>([]);
   const [savedGuestNames, setSavedGuestNames] = useState<string[]>([]);
+  const [guestEats, setGuestEats] = useState<boolean[]>([]);
+  const [savedGuestEats, setSavedGuestEats] = useState<boolean[]>([]);
+  const [eatsAlong, setEatsAlong] = useState(true);
   const [pageLoading, setPageLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [wines, setWines] = useState<any[]>([]);
@@ -234,7 +249,8 @@ export default function ActivityDetail() {
   const GUEST_SURCHARGE = 5;
   const guestCostPerPerson = Number(activity?.cost ?? 0) + GUEST_SURCHARGE;
   const totalCost = Number(activity?.cost ?? 0) + guestNames.length * guestCostPerPerson;
-  const guestsChanged = JSON.stringify(guestNames) !== JSON.stringify(savedGuestNames);
+  const guestsChanged = JSON.stringify(guestNames) !== JSON.stringify(savedGuestNames)
+    || JSON.stringify(guestEats) !== JSON.stringify(savedGuestEats);
 
   useEffect(() => {
     if (authLoading) return;
@@ -253,27 +269,54 @@ export default function ActivityDetail() {
         setIsSignedUp(myIds.includes(actId));
         setSignups(sups);
         setWines(wineList);
+        const mySignup = sups.find((s: any) => s.user_id === user?.id);
+        if (mySignup) setEatsAlong(mySignup.eats_along ?? true);
         if (pInfo) {
           setPaymentInfo(pInfo);
           setPaymentStatus(pInfo.status);
           const names = pInfo.guest_names ?? [];
+          const eats = (pInfo.guest_eats ?? []).slice(0, names.length);
+          while (eats.length < names.length) eats.push(true);
           setGuestNames(names);
           setSavedGuestNames(names);
+          setGuestEats(eats);
+          setSavedGuestEats([...eats]);
         }
       })
       .catch(() => navigate('/'))
       .finally(() => setPageLoading(false));
   }, [actId, isLoggedIn, authLoading, navigate]);
 
-  const addGuest = () => setGuestNames(n => [...n, '']);
-  const removeGuest = (i: number) => setGuestNames(n => n.filter((_, idx) => idx !== i));
+  const addGuest = () => {
+    setGuestNames(n => [...n, '']);
+    setGuestEats(e => [...e, true]);
+  };
+  const removeGuest = (i: number) => {
+    setGuestNames(n => n.filter((_, idx) => idx !== i));
+    setGuestEats(e => e.filter((_, idx) => idx !== i));
+  };
   const updateGuest = (i: number, v: string) => setGuestNames(n => n.map((name, idx) => idx === i ? v : name));
+  const updateGuestEats = (i: number, v: boolean) => setGuestEats(e => e.map((eats, idx) => idx === i ? v : eats));
+
+  // Wissel "eet mee" — bij bestaande aanmelding direct opslaan
+  const handleEatsToggle = async (checked: boolean) => {
+    setEatsAlong(checked);
+    if (!isSignedUp) return;
+    try {
+      await updateMyEatsAlong(actId, checked);
+      notifications.show({ message: checked ? 'Je eet mee!' : 'Je eet niet mee.', color: 'green' });
+      getActivitySignups(actId).then(setSignups).catch(() => {});
+    } catch {
+      setEatsAlong(!checked);
+      notifications.show({ message: 'Opslaan mislukt.', color: 'red' });
+    }
+  };
 
   // Enkelvoudige handler voor zowel aanmelden als bijwerken
   const handleConfirm = async () => {
     setActionLoading(true);
     try {
-      await confirmPayment(actId, guestNames);
+      await confirmPayment(actId, guestNames, eatsAlong, guestEats);
       const wasSignedUp = isSignedUp;
       setIsSignedUp(true);
       if (hasCost) setPaymentStatus('pending_verification');
@@ -283,6 +326,7 @@ export default function ActivityDetail() {
         // Herlaad signups om verschil in gasten te reflecteren
       }
       setSavedGuestNames([...guestNames]);
+      setSavedGuestEats([...guestEats]);
       getActivitySignups(actId).then(setSignups).catch(() => {});
       const msg = hasCost
         ? 'Betaling gemeld! Wacht op goedkeuring.'
@@ -393,10 +437,21 @@ export default function ActivityDetail() {
                   <Text size="sm" c="dimmed">Meld je aan om deel te nemen aan deze activiteit.</Text>
                 )}
 
+                <Switch
+                  label="Ik eet mee"
+                  description="Handig voor de boodschappen en de koks"
+                  checked={eatsAlong}
+                  onChange={e => handleEatsToggle(e.currentTarget.checked)}
+                  color="brand"
+                  thumbIcon={eatsAlong ? <IconToolsKitchen2 size={12} color="var(--mantine-color-brand-6)" /> : undefined}
+                />
+
                 <GuestNamesInput
                   guestNames={guestNames}
+                  guestEats={guestEats}
                   onAdd={addGuest}
                   onUpdate={updateGuest}
+                  onUpdateEats={updateGuestEats}
                   onRemove={(!isSignedUp || paymentStatus === 'unpaid') ? removeGuest : undefined}
                 />
 
@@ -489,25 +544,87 @@ export default function ActivityDetail() {
       {/* Deelnemerslijst */}
       {isLoggedIn && signups.length > 0 && (() => {
         const cards = signups.flatMap((s) => [
-          { name: s.participant_name, isGuest: false },
-          ...(s.guest_names ?? []).map((n: string) => ({ name: n || 'Gast', isGuest: true })),
+          {
+            name: s.participant_name,
+            isGuest: false,
+            isShopper: s.user_id != null && s.user_id === activity.shopper_id,
+            isCook: s.user_id != null && (activity.cook_ids ?? []).includes(s.user_id),
+            eatsAlong: s.eats_along ?? true,
+          },
+          ...(s.guest_names ?? []).map((n: string, gi: number) => ({
+            name: n || 'Gast', isGuest: true, isShopper: false, isCook: false,
+            eatsAlong: s.guest_eats?.[gi] ?? true,
+          })),
         ]);
+        const eaters = cards.filter(c => c.eatsAlong);
+        const nonEaters = cards.filter(c => !c.eatsAlong);
         return (
           <>
-            <Title order={3} mb="md">
-              Aangemeld ({cards.length}{activity.max_participants ? ` / ${activity.max_participants}` : ''})
-            </Title>
+            <Group gap="sm" mb="md" align="center">
+              <Title order={3}>
+                Aangemeld ({cards.length}{activity.max_participants ? ` / ${activity.max_participants}` : ''})
+              </Title>
+              <Popover width={240} position="bottom-start" shadow="md">
+                <Popover.Target>
+                  <Badge
+                    variant="light"
+                    color="brand"
+                    leftSection={<IconToolsKitchen2 size={12} />}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {eaters.length} {eaters.length === 1 ? 'eet mee' : 'eten mee'}
+                  </Badge>
+                </Popover.Target>
+                <Popover.Dropdown>
+                  <Stack gap={6}>
+                    <Text size="xs" fw={600} tt="uppercase" c="dimmed">Eten mee</Text>
+                    {eaters.length === 0 ? (
+                      <Text size="sm" c="dimmed">Niemand</Text>
+                    ) : eaters.map((c, i) => (
+                      <Text key={i} size="sm">{c.name}{c.isGuest ? ' (gast)' : ''}</Text>
+                    ))}
+                    {nonEaters.length > 0 && (
+                      <>
+                        <Text size="xs" fw={600} tt="uppercase" c="dimmed" mt={4}>Eten niet mee</Text>
+                        {nonEaters.map((c, i) => (
+                          <Text key={i} size="sm" c="dimmed">{c.name}</Text>
+                        ))}
+                      </>
+                    )}
+                  </Stack>
+                </Popover.Dropdown>
+              </Popover>
+            </Group>
             <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="sm">
               {cards.map((c, i) => (
                 <Paper key={i} withBorder radius="md" p="sm">
-                  <Group gap="sm">
+                  <Group gap="sm" wrap="nowrap">
                     <Avatar size={32} radius="xl" color={c.isGuest ? 'gray' : 'brand'}>
                       <IconUser size={16} />
                     </Avatar>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <Text size="sm" fw={500} truncate>{c.name}</Text>
                       {c.isGuest && <Text size="xs" c="dimmed">Gast</Text>}
+                      {!c.eatsAlong && <Text size="xs" c="dimmed">Eet niet mee</Text>}
                     </div>
+                    {(c.isShopper || c.isCook) && (
+                      <Group gap={4} wrap="nowrap">
+                        {c.isShopper && (
+                          <Tooltip label="Doet boodschappen">
+                            <ThemeIcon size="sm" variant="light" color="teal">
+                              <IconShoppingCart size={13} />
+                            </ThemeIcon>
+                          </Tooltip>
+                        )}
+                        {c.isCook && (
+                          <Tooltip label="Kookt">
+                            <ThemeIcon size="sm" variant="light" color="orange">
+                              <IconChefHat size={13} />
+                            </ThemeIcon>
+                          </Tooltip>
+                        )}
+                      </Group>
+                    )}
                   </Group>
                 </Paper>
               ))}

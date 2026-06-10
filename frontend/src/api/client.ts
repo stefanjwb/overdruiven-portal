@@ -14,6 +14,9 @@ function processQueue(error: any) {
   failedQueue = [];
 }
 
+// Pagina's die zonder login bekeken mogen worden — geen redirect naar /login bij 401
+const isPublicPage = (p: string) => p === '/' || p === '/blog' || p.startsWith('/blog/');
+
 api.interceptors.response.use(
   (r) => r,
   async (error) => {
@@ -45,7 +48,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError);
         const p = window.location.pathname;
-        if (!p.includes('/login') && p !== '/') window.location.href = '/login';
+        if (!p.includes('/login') && !isPublicPage(p)) window.location.href = '/login';
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -55,7 +58,7 @@ api.interceptors.response.use(
     // Definitief niet ingelogd
     if (error.response?.status === 401) {
       const p = window.location.pathname;
-      if (!p.includes('/login') && p !== '/') window.location.href = '/login';
+      if (!p.includes('/login') && !isPublicPage(p)) window.location.href = '/login';
     }
 
     return Promise.reject(error);
