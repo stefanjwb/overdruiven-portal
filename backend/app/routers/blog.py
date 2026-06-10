@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
+import nh3
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
@@ -11,6 +12,46 @@ from app.models.blog import BlogPost
 from app.models.user import User
 
 router = APIRouter()
+
+# Ruim boven wat een normaal bericht nodig heeft (incl. enkele base64-afbeeldingen),
+# maar voorkomt het opslaan van extreem grote payloads.
+MAX_CONTENT_CHARS = 20_000_000
+MAX_IMAGE_CHARS = 20_000_000
+
+# Tags/attributen die de TipTap-editor produceert; al het andere wordt gestript.
+ALLOWED_TAGS = {
+    "p", "br", "strong", "b", "em", "i", "u", "s", "h1", "h2", "h3",
+    "blockquote", "hr", "ul", "ol", "li", "a", "img", "code", "pre",
+}
+ALLOWED_ATTRIBUTES = {
+    # rel wordt door nh3 zelf gezet (noopener noreferrer)
+    "a": {"href", "target", "title"},
+    "img": {"src", "alt", "title"},
+    # style is nodig voor tekstuitlijning (text-align) uit de editor
+    "p": {"style"}, "h1": {"style"}, "h2": {"style"}, "h3": {"style"},
+}
+# data: toegestaan voor base64-afbeeldingen in de tekst
+ALLOWED_URL_SCHEMES = {"http", "https", "mailto", "data"}
+
+
+def sanitize_content(html: str) -> str:
+    """Server-side HTML-sanitization: verwijdert scripts, event handlers, etc."""
+    return nh3.clean(
+        html,
+        tags=ALLOWED_TAGS,
+        attributes=ALLOWED_ATTRIBUTES,
+        url_schemes=ALLOWED_URL_SCHEMES,
+    )
+
+
+def validate_image(image: Optional[str]) -> None:
+    """Omslagfoto moet een data-URL van een afbeelding zijn (geen externe URL)."""
+    if image is None or image == "":
+        return
+    if not image.startswith("data:image/"):
+        raise HTTPException(400, "Afbeelding moet een geüploade afbeelding zijn (data-URL).")
+    if len(image) > MAX_IMAGE_CHARS:
+        raise HTTPException(400, "Afbeelding is te groot.")
 
 
 class BlogPostCreate(BaseModel):
@@ -80,9 +121,12 @@ def create_post(
 ):
     if not data.title.strip() or not data.content.strip():
         raise HTTPException(400, "Titel en inhoud zijn verplicht.")
+    if len(data.content) > MAX_CONTENT_CHARS:
+        raise HTTPException(400, "De inhoud is te groot.")
+    validate_image(data.image)
     post = BlogPost(
         title=data.title.strip(),
-        content=data.content,
+        content=sanitize_content(data.content),
         image=data.image,
         published=data.published,
         author_id=current_user.id,
@@ -111,10 +155,13 @@ def update_post(
     if data.content is not None:
         if not data.content.strip():
             raise HTTPException(400, "Inhoud mag niet leeg zijn.")
-        post.content = data.content
+        if len(data.content) > MAX_CONTENT_CHARS:
+            raise HTTPException(400, "De inhoud is te groot.")
+        post.content = sanitize_content(data.content)
     if data.remove_image:
         post.image = None
     elif data.image is not None:
+        validate_image(data.image)
         post.image = data.image
     if data.published is not None:
         post.published = data.published
