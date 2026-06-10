@@ -3,17 +3,20 @@ import bannerImg from '../assets/vineyard.webp';
 import { useNavigate } from 'react-router-dom';
 import {
   Container, Title, Text, SimpleGrid, Card, Group, Badge, Button,
-  Stack, Divider, Center, Loader, Image, Modal, ActionIcon, Tooltip,
+  Stack, Center, Loader, Image, Modal, ActionIcon, Tooltip,
 } from '@mantine/core';
 import { Carousel } from '@mantine/carousel';
 import {
   IconCalendarEvent, IconMapPin, IconClock,
   IconUsers, IconLock, IconArrowRight, IconGlassFull, IconCamera,
+  IconNews, IconChevronDown,
 } from '@tabler/icons-react';
 
 import { useAuth } from '../context/AuthContext';
 import { getUpcomingActivities, getPublicActivities, getMySignups } from '../api/activities';
 import { getHomepageWines } from '../api/wines';
+import { getPublishedPosts } from '../api/blog';
+import { BlogCard, FeaturedPost } from './Blog';
 import dayjs from 'dayjs';
 import 'dayjs/locale/nl';
 import { formatTime } from '../utils/time';
@@ -23,6 +26,26 @@ dayjs.locale('nl');
 const WINE_TYPE_COLORS: Record<string, string> = {
   rood: 'red', wit: 'yellow', rosé: 'pink', oranje: 'orange', mousserende: 'cyan', zoet: 'grape',
 };
+
+function SectionHeader({ eyebrow, title, subtitle, action }: {
+  eyebrow: string;
+  title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <Group justify="space-between" align="flex-end" mb="xl">
+      <div>
+        <Text size="xs" fw={700} tt="uppercase" c="brand" style={{ letterSpacing: 2 }} mb={4}>
+          {eyebrow}
+        </Text>
+        <Title order={2} mb={2}>{title}</Title>
+        {subtitle && <Text size="sm" c="dimmed">{subtitle}</Text>}
+      </div>
+      {action}
+    </Group>
+  );
+}
 
 function ActivityCard({ a, isSignedUp, onOpen }: {
   a: any;
@@ -215,6 +238,7 @@ export default function Home() {
   const [actsLoading, setActsLoading] = useState(false);
   const [signedUpIds, setSignedUpIds] = useState<number[]>([]);
   const [homepageWines, setHomepageWines] = useState<any[]>([]);
+  const [blogPosts, setBlogPosts] = useState<any[]>([]);
 
   const loadActivities = useCallback(() => {
     setActsLoading(true);
@@ -226,8 +250,16 @@ export default function Home() {
     if (loading) return;
     loadActivities();
     getHomepageWines().then(setHomepageWines).catch(() => {});
+    getPublishedPosts().then(p => setBlogPosts(p.slice(0, 4))).catch(() => {});
     if (isLoggedIn) getMySignups().then(setSignedUpIds).catch(() => {});
   }, [loading, isLoggedIn, loadActivities]);
+
+  const featuredPost = blogPosts[0] ?? null;
+  const morePosts = blogPosts.slice(1);
+
+  const scrollToActivities = () => {
+    document.getElementById('activiteiten')?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
     <div>
@@ -237,32 +269,111 @@ export default function Home() {
         backgroundImage: `url(${bannerImg})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center 30%',
-        minHeight: '420px',
+        minHeight: 'min(560px, 80vh)',
         color: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}>
         <div style={{
           position: 'absolute', inset: 0,
-          background: 'linear-gradient(135deg, rgba(80,20,50,0.75) 0%, rgba(40,8,28,0.65) 100%)',
+          background: 'linear-gradient(135deg, rgba(80,20,50,0.78) 0%, rgba(40,8,28,0.7) 100%)',
         }} />
+
+        <Container size="md" style={{ position: 'relative', textAlign: 'center', padding: '64px 16px' }}>
+          <Text size="sm" fw={700} tt="uppercase" style={{ letterSpacing: 4, color: 'rgba(255,255,255,0.75)' }} mb="xs">
+            Utrechtse wijnclub
+          </Text>
+          <Title order={1} style={{ fontSize: 'clamp(2.2rem, 6vw, 3.4rem)', lineHeight: 1.1, color: 'white' }} mb="md">
+            Château Overdruiven
+          </Title>
+          <Text size="lg" maw={520} mx="auto" mb="xl" style={{ color: 'rgba(255,255,255,0.85)', lineHeight: 1.6 }}>
+            Samen proeven, leren en genieten. Lees onze verhalen, blader door de wijnen
+            die we dronken en ontdek wat er op de agenda staat.
+          </Text>
+          <Group justify="center" gap="sm">
+            <Button
+              size="md"
+              color="brand"
+              variant="white"
+              c="brand.7"
+              leftSection={<IconNews size={18} />}
+              onClick={() => navigate('/blog')}
+            >
+              Lees onze blog
+            </Button>
+            <Button
+              size="md"
+              variant="outline"
+              color="gray.0"
+              c="white"
+              style={{ borderColor: 'rgba(255,255,255,0.5)' }}
+              leftSection={<IconCalendarEvent size={18} />}
+              onClick={scrollToActivities}
+            >
+              Bekijk activiteiten
+            </Button>
+          </Group>
+        </Container>
+
+        <ActionIcon
+          variant="transparent"
+          onClick={scrollToActivities}
+          aria-label="Scroll naar beneden"
+          style={{ position: 'absolute', bottom: 18, left: '50%', transform: 'translateX(-50%)' }}
+        >
+          <IconChevronDown size={28} color="rgba(255,255,255,0.7)" />
+        </ActionIcon>
       </div>
 
-      <Container size="lg" py="xl">
+      {/* Blog */}
+      {blogPosts.length > 0 && (
+        <div>
+          <Container size="lg" py={56}>
+            <SectionHeader
+              eyebrow="Blog"
+              title="Over onze wijnavonden"
+              subtitle="Verhalen en hoogtepunten van onze wijnclub"
+              action={
+                <Button
+                  variant="subtle"
+                  color="brand"
+                  size="sm"
+                  rightSection={<IconArrowRight size={14} />}
+                  onClick={() => navigate('/blog')}
+                >
+                  Alle berichten
+                </Button>
+              }
+            />
 
-        {/* Recente wijnen carousel */}
-        {homepageWines.length > 0 && (
-          <>
-            <Group justify="space-between" align="flex-end" mb="lg">
-              <div>
-                <Title order={2} mb={2}>Gedronken wijnen</Title>
-                <Text size="sm" c="dimmed">Een selectie uit onze proefsessies</Text>
-              </div>
-            </Group>
+            {featuredPost && (
+              <FeaturedPost post={featuredPost} onOpen={() => navigate(`/blog/${featuredPost.id}`)} />
+            )}
+
+            {morePosts.length > 0 && (
+              <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
+                {morePosts.map(p => <BlogCard key={p.id} post={p} />)}
+              </SimpleGrid>
+            )}
+          </Container>
+        </div>
+      )}
+
+      {/* Recente wijnen carousel */}
+      {homepageWines.length > 0 && (
+        <div style={{ background: 'var(--mantine-color-gray-0)' }}>
+          <Container size="lg" py={56}>
+            <SectionHeader
+              eyebrow="Proeverijen"
+              title="Gedronken wijnen"
+              subtitle="Een selectie uit onze proefsessies"
+            />
             <Carousel
               slideSize={{ base: '100%', sm: '50%', md: '33.333%' }}
               slideGap="lg"
               loop
               align="start"
-              mb="xl"
               styles={{
                 control: {
                   background: 'var(--mantine-color-brand-7)',
@@ -280,40 +391,44 @@ export default function Home() {
                 </Carousel.Slide>
               ))}
             </Carousel>
-            <Divider mb="xl" />
-          </>
-        )}
+          </Container>
+        </div>
+      )}
 
-        {/* Activiteiten */}
-        <Title order={2} mb="md">
-          {isLoggedIn ? 'Komende activiteiten' : 'Publieke activiteiten'}
-        </Title>
+      {/* Activiteiten */}
+      <div id="activiteiten">
+        <Container size="lg" py={56}>
+          <SectionHeader
+            eyebrow="Agenda"
+            title={isLoggedIn ? 'Komende activiteiten' : 'Publieke activiteiten'}
+            subtitle="Proefsessies, thema-avonden en meer"
+          />
 
-        {!isLoggedIn && (
-          <Group mb="md" gap="xs" align="center">
-            <IconLock size={14} color="var(--mantine-color-dimmed)" />
-            <Text size="sm" c="dimmed">Log in om alle activiteiten te zien en je aan te melden.</Text>
-          </Group>
-        )}
+          {!isLoggedIn && (
+            <Group mb="md" gap="xs" align="center">
+              <IconLock size={14} color="var(--mantine-color-dimmed)" />
+              <Text size="sm" c="dimmed">Log in om alle activiteiten te zien en je aan te melden.</Text>
+            </Group>
+          )}
 
-        {actsLoading ? (
-          <Center py={60}><Loader color="brand" type="dots" /></Center>
-        ) : activities.length === 0 ? (
-          <Text c="dimmed" ta="center" py={40}>Geen komende activiteiten gepland.</Text>
-        ) : (
-          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-            {activities.map(a => (
-              <ActivityCard
-                key={a.id}
-                a={a}
-                isSignedUp={signedUpIds.includes(a.id)}
-                onOpen={() => navigate(`/activiteiten/${a.id}`)}
-              />
-            ))}
-          </SimpleGrid>
-        )}
-
-      </Container>
+          {actsLoading ? (
+            <Center py={60}><Loader color="brand" type="dots" /></Center>
+          ) : activities.length === 0 ? (
+            <Text c="dimmed" ta="center" py={40}>Geen komende activiteiten gepland.</Text>
+          ) : (
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
+              {activities.map(a => (
+                <ActivityCard
+                  key={a.id}
+                  a={a}
+                  isSignedUp={signedUpIds.includes(a.id)}
+                  onOpen={() => navigate(`/activiteiten/${a.id}`)}
+                />
+              ))}
+            </SimpleGrid>
+          )}
+        </Container>
+      </div>
     </div>
   );
 }

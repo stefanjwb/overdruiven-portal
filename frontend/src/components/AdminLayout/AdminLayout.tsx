@@ -5,7 +5,7 @@ import {
 import { useDisclosure } from '@mantine/hooks';
 import {
   IconUsers, IconCalendarEvent, IconArrowLeft,
-  IconLogout, IconCreditCard, IconHistory, IconPackage, IconBottle, IconReceipt, IconChartBar,
+  IconLogout, IconCreditCard, IconHistory, IconPackage, IconBottle, IconReceipt, IconChartBar, IconNews,
 } from '@tabler/icons-react';
 import { useAuth } from '../../context/AuthContext';
 import { notifications } from '@mantine/notifications';
@@ -115,6 +115,10 @@ export default function AdminLayout() {
           <NavLink label="Wijnbibliotheek" leftSection={<IconBottle size={18} />}
             active={loc.pathname === '/admin/wijnbibliotheek'}
             onClick={() => go('/admin/wijnbibliotheek')} color="brand" />
+
+          <NavLink label="Blog" leftSection={<IconNews size={18} />}
+            active={loc.pathname === '/admin/blog'}
+            onClick={() => go('/admin/blog')} color="brand" />
         </div>
 
         <div className={classes.navbarFooter}>

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//usr/bin/**)",
+      "Bash(/home/stefan/Documents/GitHub/overdruiven-portal/backend/venv/bin/python -c \"import sys; sys.path.insert\\(0, '/home/stefan/Documents/GitHub/overdruiven-portal/backend'\\); from app.main import app; print\\('Backend importeert OK, routes:'\\); print\\([r.path for r in app.routes if 'blog' in r.path]\\)\")"
+    ]
+  }
+}

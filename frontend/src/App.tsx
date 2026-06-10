@@ -19,6 +19,9 @@ import Library from './pages/Library';
 import Declarations from './pages/Declarations';
 import AdminDeclarations from './pages/admin/Declarations';
 import AdminStatistics from './pages/admin/Statistics';
+import AdminBlog from './pages/admin/Blog';
+import Blog from './pages/Blog';
+import BlogPostDetail from './pages/BlogPostDetail';
 
 export default function App() {
   return (
@@ -27,6 +30,8 @@ export default function App() {
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/activiteiten/:id" element={<ActivityDetail />} />
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/blog/:id" element={<BlogPostDetail />} />
         <Route path="/bibliotheek" element={<Library />} />
         <Route path="/profiel" element={<Profile />} />
         <Route path="/declaraties" element={<Declarations />} />
@@ -48,11 +53,13 @@ export default function App() {
         <Route path="/admin/wijnbibliotheek" element={<ProtectedRoute role="admin"><AdminWineLibrary /></ProtectedRoute>} />
         <Route path="/admin/declaraties" element={<ProtectedRoute role="admin"><AdminDeclarations /></ProtectedRoute>} />
         <Route path="/admin/statistieken" element={<ProtectedRoute role="admin"><AdminStatistics /></ProtectedRoute>} />
+        <Route path="/admin/blog" element={<ProtectedRoute role="admin"><AdminBlog /></ProtectedRoute>} />
       </Route>
 
       {/* Organisator panel — sidebar layout met alleen activiteiten */}
       <Route element={<OrganizerLayout />}>
         <Route path="/organisator/activiteiten" element={<ProtectedRoute role="organizer"><OrganizerActivities /></ProtectedRoute>} />
+        <Route path="/organisator/blog" element={<ProtectedRoute role="organizer"><AdminBlog /></ProtectedRoute>} />
       </Route>
 
       {/* Default */}

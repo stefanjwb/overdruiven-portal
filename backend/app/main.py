@@ -9,7 +9,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
 from app.core.database import create_db_and_tables
-from app.routers import auth, activities, signups, payments, admin, public, wines, inventory, declarations
+from app.routers import auth, activities, signups, payments, admin, public, wines, inventory, declarations, blog
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -69,6 +69,7 @@ app.include_router(admin.router, prefix="/admin", tags=["Admin"])
 app.include_router(wines.router, prefix="/wines", tags=["Wines"])
 app.include_router(inventory.router, prefix="/inventory", tags=["Inventory"])
 app.include_router(declarations.router, prefix="/declarations", tags=["Declarations"])
+app.include_router(blog.router, prefix="/blog", tags=["Blog"])
 
 
 @app.get("/health")

@@ -3,7 +3,7 @@ import {
   AppShell, Burger, Group, Text, NavLink, Avatar, UnstyledButton, Box,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconCalendarEvent, IconArrowLeft, IconLogout } from '@tabler/icons-react';
+import { IconCalendarEvent, IconArrowLeft, IconLogout, IconNews } from '@tabler/icons-react';
 import { useAuth } from '../../context/AuthContext';
 import { notifications } from '@mantine/notifications';
 import logoVolledig from '../../assets/logo-volledig.png';
@@ -59,6 +59,13 @@ export default function OrganizerLayout() {
             leftSection={<IconCalendarEvent size={18} />}
             active={loc.pathname === '/organisator/activiteiten'}
             onClick={() => go('/organisator/activiteiten')}
+            color="brand"
+          />
+          <NavLink
+            label="Blog"
+            leftSection={<IconNews size={18} />}
+            active={loc.pathname === '/organisator/blog'}
+            onClick={() => go('/organisator/blog')}
             color="brand"
           />
         </div>
