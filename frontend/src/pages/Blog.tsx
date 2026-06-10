@@ -7,6 +7,7 @@ import {
 import { IconCalendarEvent, IconUser, IconNews, IconArrowRight, IconArrowLeft, IconPlus } from '@tabler/icons-react';
 import { useAuth } from '../context/AuthContext';
 import { getPublishedPosts } from '../api/blog';
+import { stripHtml } from '../utils/html';
 import bannerImg from '../assets/vineyard.webp';
 import classes from './Blog.module.css';
 import dayjs from 'dayjs';
@@ -39,7 +40,7 @@ export function BlogCard({ post }: { post: any }) {
       )}
       <Stack gap={6} p="md" style={{ flex: 1 }}>
         <Text fw={700} size="lg" lineClamp={2} c="dark">{post.title}</Text>
-        <Text size="sm" c="dimmed" lineClamp={3} style={{ flex: 1 }}>{post.content}</Text>
+        <Text size="sm" c="dimmed" lineClamp={3} style={{ flex: 1 }}>{stripHtml(post.content)}</Text>
         <Group gap="md" mt={4}>
           <Group gap={5}>
             <IconCalendarEvent size={13} color="var(--mantine-color-brand-6)" />
@@ -88,7 +89,7 @@ export function FeaturedPost({ post, onOpen }: { post: any; onOpen: () => void }
             )}
           </Group>
           <Text size="sm" lineClamp={7} style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7, flex: 1 }}>
-            {post.content}
+            {stripHtml(post.content)}
           </Text>
           <Button
             variant="light"

@@ -68,7 +68,7 @@ export default function PublicLayout() {
                       Admin panel
                     </Menu.Item>
                   )}
-                  {isOrganizer && (
+                  {isOrganizer && !isAdmin && (
                     <Menu.Item
                       leftSection={<IconLayoutDashboard size={rem(16)} />}
                       onClick={() => navigate('/organisator/activiteiten')}

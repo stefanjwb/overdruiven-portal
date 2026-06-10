@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   Container, Title, Text, Group, Center, Loader, Button, Image, Divider,
+  TypographyStylesProvider,
 } from '@mantine/core';
 import { IconCalendarEvent, IconUser, IconArrowLeft } from '@tabler/icons-react';
 import { getPost } from '../api/blog';
+import { looksLikeHtml, sanitizeHtml } from '../utils/html';
 import dayjs from 'dayjs';
 import 'dayjs/locale/nl';
 
@@ -72,7 +74,16 @@ export default function BlogPostDetail() {
 
       <Divider mb="lg" />
 
-      <Text style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{post.content}</Text>
+      {looksLikeHtml(post.content) ? (
+        <TypographyStylesProvider>
+          <div
+            style={{ lineHeight: 1.7 }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
+          />
+        </TypographyStylesProvider>
+      ) : (
+        <Text style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{post.content}</Text>
+      )}
     </Container>
   );
 }

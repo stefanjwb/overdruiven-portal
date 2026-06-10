@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   Title, Text, Group, Badge, Paper, Table, Center, Loader, TextInput,
-  Button, Modal, Stack, Textarea, ActionIcon, Tooltip, Switch, Image,
+  Button, Modal, Stack, ActionIcon, Tooltip, Switch, Image,
   FileButton, Pagination,
 } from '@mantine/core';
-import { useDebouncedValue } from '@mantine/hooks';
+import { useDebouncedValue, useMediaQuery } from '@mantine/hooks';
 import { usePagination } from '../../hooks/usePagination';
 import { notifications } from '@mantine/notifications';
 import { IconSearch, IconPlus, IconEdit, IconTrash, IconUpload, IconX } from '@tabler/icons-react';
 import { getAllPosts, createPost, updatePost, deletePost } from '../../api/blog';
+import BlogEditor from '../../components/BlogEditor/BlogEditor';
+import { stripHtml } from '../../utils/html';
 import dayjs from 'dayjs';
 import 'dayjs/locale/nl';
 
@@ -36,17 +38,18 @@ function PostForm({ form, setForm }: {
         value={form.title}
         onChange={e => setForm(f => ({ ...f, title: e.currentTarget.value }))}
       />
-      <Textarea
-        label="Inhoud"
-        withAsterisk
-        placeholder="Schrijf hier je blogpost..."
-        value={form.content}
-        onChange={e => setForm(f => ({ ...f, content: e.currentTarget.value }))}
-        autosize
-        minRows={8}
-      />
       <div>
-        <Text size="sm" fw={500} mb={4}>Afbeelding</Text>
+        <Text size="sm" fw={500} mb={4}>Inhoud <Text span c="red">*</Text></Text>
+        <BlogEditor
+          initialContent={form.content}
+          onChange={html => setForm(f => ({ ...f, content: html }))}
+        />
+      </div>
+      <div>
+        <Text size="sm" fw={500}>Omslagfoto</Text>
+        <Text size="xs" c="dimmed" mb={6}>
+          Wordt getoond op de blogkaarten en bovenaan het bericht. Afbeeldingen in de tekst zelf voeg je toe via het foto-icoon in de werkbalk hierboven.
+        </Text>
         {form.image ? (
           <Stack gap="xs">
             <Image src={form.image} radius="md" mah={200} fit="contain" />
@@ -57,7 +60,7 @@ function PostForm({ form, setForm }: {
               leftSection={<IconX size={14} />}
               onClick={() => setForm(f => ({ ...f, image: null }))}
             >
-              Afbeelding verwijderen
+              Omslagfoto verwijderen
             </Button>
           </Stack>
         ) : (
@@ -65,7 +68,7 @@ function PostForm({ form, setForm }: {
             onChange={file => {
               if (!file) return;
               if (file.size > 15 * 1024 * 1024) {
-                notifications.show({ message: 'Afbeelding mag maximaal 15 MB zijn.', color: 'red' });
+                notifications.show({ message: 'Omslagfoto mag maximaal 15 MB zijn.', color: 'red' });
                 return;
               }
               const reader = new FileReader();
@@ -76,7 +79,7 @@ function PostForm({ form, setForm }: {
           >
             {props => (
               <Button variant="light" color="brand" size="xs" leftSection={<IconUpload size={14} />} {...props}>
-                Afbeelding uploaden
+                Omslagfoto uploaden
               </Button>
             )}
           </FileButton>
@@ -110,6 +113,8 @@ export default function AdminBlog() {
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const isMobile = useMediaQuery('(max-width: 48em)');
+
   const load = () => {
     setLoading(true);
     getAllPosts().then(setPosts).catch(() => {}).finally(() => setLoading(false));
@@ -120,13 +125,13 @@ export default function AdminBlog() {
   const filtered = useMemo(() => {
     if (!debouncedSearch.trim()) return posts;
     const q = debouncedSearch.toLowerCase();
-    return posts.filter(p => p.title.toLowerCase().includes(q) || p.content.toLowerCase().includes(q));
+    return posts.filter(p => p.title.toLowerCase().includes(q) || stripHtml(p.content).toLowerCase().includes(q));
   }, [posts, debouncedSearch]);
 
   const { page, setPage, totalPages, paginated } = usePagination(filtered, [debouncedSearch]);
 
   const handleCreate = async () => {
-    if (!createForm.title.trim() || !createForm.content.trim()) {
+    if (!createForm.title.trim() || !stripHtml(createForm.content)) {
       notifications.show({ message: 'Titel en inhoud zijn verplicht.', color: 'red' });
       return;
     }
@@ -160,7 +165,7 @@ export default function AdminBlog() {
   };
 
   const handleEdit = async () => {
-    if (!editForm.title.trim() || !editForm.content.trim()) {
+    if (!editForm.title.trim() || !stripHtml(editForm.content)) {
       notifications.show({ message: 'Titel en inhoud zijn verplicht.', color: 'red' });
       return;
     }
@@ -240,7 +245,9 @@ export default function AdminBlog() {
             {posts.length === 0 ? 'Nog geen blogposts.' : 'Geen resultaten.'}
           </Text>
         ) : (
-          <Table.ScrollContainer minWidth={500}>
+          <>
+          {/* Desktop tabel */}
+          <Table.ScrollContainer minWidth={500} visibleFrom="sm">
             <Table verticalSpacing="sm" highlightOnHover>
               <Table.Thead>
                 <Table.Tr>
@@ -256,7 +263,7 @@ export default function AdminBlog() {
                   <Table.Tr key={post.id}>
                     <Table.Td>
                       <Text size="sm" fw={500} lineClamp={1}>{post.title}</Text>
-                      <Text size="xs" c="dimmed" lineClamp={1}>{post.content}</Text>
+                      <Text size="xs" c="dimmed" lineClamp={1}>{stripHtml(post.content)}</Text>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm">{post.author_name ?? '—'}</Text>
@@ -293,6 +300,42 @@ export default function AdminBlog() {
               </Table.Tbody>
             </Table>
           </Table.ScrollContainer>
+
+          {/* Mobiele kaartweergave */}
+          <Stack gap="sm" hiddenFrom="sm">
+            {paginated.map(post => (
+              <Paper key={post.id} withBorder radius="md" p="md">
+                <Stack gap="xs">
+                  <Group justify="space-between" wrap="nowrap" align="flex-start">
+                    <Text size="sm" fw={600} lineClamp={2} style={{ flex: 1 }}>{post.title}</Text>
+                    <Badge
+                      variant="light"
+                      color={post.published ? 'green' : 'gray'}
+                      style={{ cursor: 'pointer', flexShrink: 0 }}
+                      onClick={() => togglePublished(post)}
+                    >
+                      {post.published ? 'Gepubliceerd' : 'Concept'}
+                    </Badge>
+                  </Group>
+
+                  <Text size="xs" c="dimmed" lineClamp={2}>{stripHtml(post.content)}</Text>
+                  <Text size="xs" c="dimmed">
+                    {dayjs(post.created_at).format('D MMM YYYY')}{post.author_name ? ` · ${post.author_name}` : ''}
+                  </Text>
+
+                  <Group gap="xs" mt="xs" wrap="nowrap">
+                    <Button size="xs" variant="light" color="brand" leftSection={<IconEdit size={14} />} onClick={() => openEdit(post)} style={{ flex: 1 }}>
+                      Bewerken
+                    </Button>
+                    <ActionIcon size="md" variant="subtle" color="red" onClick={() => setDeleteTarget(post)} aria-label="Verwijderen">
+                      <IconTrash size={16} />
+                    </ActionIcon>
+                  </Group>
+                </Stack>
+              </Paper>
+            ))}
+          </Stack>
+          </>
         )}
         {totalPages > 1 && (
           <Group justify="center" mt="md">
@@ -302,7 +345,7 @@ export default function AdminBlog() {
       </Paper>
 
       {/* Toevoegen */}
-      <Modal opened={createOpen} onClose={() => { setCreateOpen(false); setCreateForm(emptyForm); }} title="Nieuwe blogpost" size="lg">
+      <Modal opened={createOpen} onClose={() => { setCreateOpen(false); setCreateForm(emptyForm); }} title="Nieuwe blogpost" size="lg" fullScreen={isMobile}>
         <PostForm form={createForm} setForm={setCreateForm} />
         <Group justify="flex-end" mt="md">
           <Button variant="default" onClick={() => setCreateOpen(false)}>Annuleren</Button>
@@ -313,7 +356,7 @@ export default function AdminBlog() {
       </Modal>
 
       {/* Bewerken */}
-      <Modal opened={!!editTarget} onClose={() => setEditTarget(null)} title="Blogpost bewerken" size="lg">
+      <Modal opened={!!editTarget} onClose={() => setEditTarget(null)} title="Blogpost bewerken" size="lg" fullScreen={isMobile}>
         <PostForm form={editForm} setForm={setEditForm} />
         <Group justify="flex-end" mt="md">
           <Button variant="default" onClick={() => setEditTarget(null)}>Annuleren</Button>
