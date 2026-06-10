@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Title, Text, Group, Badge, Paper, Table, Center, Loader, TextInput,
   Button, Modal, Stack, ActionIcon, Tooltip, Switch, Image,
@@ -29,6 +29,8 @@ function PostForm({ form, setForm }: {
   form: FormState;
   setForm: React.Dispatch<React.SetStateAction<FormState>>;
 }) {
+  const initialContent = useRef(form.content);
+
   return (
     <Stack gap="sm">
       <TextInput
@@ -36,12 +38,17 @@ function PostForm({ form, setForm }: {
         withAsterisk
         placeholder="bijv. Verslag van onze Bourgogne-avond"
         value={form.title}
-        onChange={e => setForm(f => ({ ...f, title: e.currentTarget.value }))}
+        onChange={e => {
+          // Waarde nu uitlezen: React roept de updater later aan, waarna
+          // e.currentTarget al null is (geldig alleen tijdens event-dispatch).
+          const value = e.currentTarget.value;
+          setForm(f => ({ ...f, title: value }));
+        }}
       />
       <div>
         <Text size="sm" fw={500} mb={4}>Inhoud <Text span c="red">*</Text></Text>
         <BlogEditor
-          initialContent={form.content}
+          initialContent={initialContent.current}
           onChange={html => setForm(f => ({ ...f, content: html }))}
         />
       </div>
@@ -89,7 +96,10 @@ function PostForm({ form, setForm }: {
         label="Publiceren"
         description="Gepubliceerde posts zijn voor alle bezoekers zichtbaar."
         checked={form.published}
-        onChange={e => setForm(f => ({ ...f, published: e.currentTarget.checked }))}
+        onChange={e => {
+          const checked = e.currentTarget.checked;
+          setForm(f => ({ ...f, published: checked }));
+        }}
         color="brand"
       />
     </Stack>

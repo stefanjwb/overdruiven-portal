@@ -17,6 +17,9 @@ interface Props {
 
 export default function BlogEditor({ initialContent, onChange }: Props) {
   const editor = useEditor({
+    // Vereist bij React.StrictMode (zie main.tsx): zonder dit rendert TipTap de
+    // editor direct tijdens de render-fase, wat met React 18 crasht bij interactie.
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Underline,

@@ -35,7 +35,10 @@ function ItemForm({ form, setForm }: {
         withAsterisk
         placeholder="bijv. Bordeauxglazen"
         value={form.name}
-        onChange={e => setForm(f => ({ ...f, name: e.currentTarget.value }))}
+        onChange={e => {
+          const value = e.currentTarget.value;
+          setForm(f => ({ ...f, name: value }));
+        }}
       />
       <Group grow>
         <Select
@@ -59,7 +62,10 @@ function ItemForm({ form, setForm }: {
         label="Beschrijving"
         placeholder="Optionele beschrijving..."
         value={form.description}
-        onChange={e => setForm(f => ({ ...f, description: e.currentTarget.value }))}
+        onChange={e => {
+          const value = e.currentTarget.value;
+          setForm(f => ({ ...f, description: value }));
+        }}
         autosize
         minRows={2}
       />
@@ -67,7 +73,10 @@ function ItemForm({ form, setForm }: {
         label="Notities"
         placeholder="bijv. opgeslagen in kast 2..."
         value={form.notes}
-        onChange={e => setForm(f => ({ ...f, notes: e.currentTarget.value }))}
+        onChange={e => {
+          const value = e.currentTarget.value;
+          setForm(f => ({ ...f, notes: value }));
+        }}
         autosize
         minRows={2}
       />
