@@ -14,6 +14,8 @@ class ActivityCreate(BaseModel):
     is_public: bool = False
     cost: Optional[float] = None
     organizer_id: Optional[int] = None
+    shopper_id: Optional[int] = None
+    cook_ids: list[int] = []
     add_to_calendar: bool = True
 
 
@@ -28,6 +30,8 @@ class ActivityUpdate(BaseModel):
     is_public: bool = False
     cost: Optional[float] = None
     organizer_id: Optional[int] = None
+    shopper_id: Optional[int] = None
+    cook_ids: list[int] = []
 
 
 class ActivityResponse(BaseModel):
@@ -43,6 +47,10 @@ class ActivityResponse(BaseModel):
     cost: Optional[float]
     organizer_id: Optional[int]
     organizer_name: Optional[str] = None
+    shopper_id: Optional[int] = None
+    shopper_name: Optional[str] = None
+    cook_ids: list[int] = []
+    cook_names: list[str] = []
     signups_count: int = 0
     google_event_id: Optional[str] = None
 
@@ -55,3 +63,5 @@ class SignupResponse(BaseModel):
     payment_id: Optional[int] = None
     guests: int = 0
     guest_names: list[str] = []
+    guest_eats: list[bool] = []
+    eats_along: bool = True

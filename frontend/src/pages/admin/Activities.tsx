@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Title, Text, Group, Badge, Paper, Table, Center, Loader, TextInput, Progress, Button, Modal, Stack, Textarea, NumberInput, Select, Switch, ActionIcon, Tooltip, Tabs, Pagination, Anchor, Divider } from '@mantine/core';
+import { Title, Text, Group, Badge, Paper, Table, Center, Loader, TextInput, Progress, Button, Modal, Stack, Textarea, NumberInput, Select, MultiSelect, Switch, ActionIcon, Tooltip, Tabs, Pagination, Anchor, Divider } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useDebouncedValue } from '@mantine/hooks';
 import { usePagination } from '../../hooks/usePagination';
@@ -23,6 +23,8 @@ const emptyForm = {
   cost: '' as number | '',
   is_public: false,
   organizer_id: null as number | null,
+  shopper_id: null as number | null,
+  cook_ids: [] as number[],
   add_to_calendar: true,
 };
 
@@ -40,6 +42,8 @@ function activityToForm(a: any): FormState {
     cost: a.cost ?? '',
     is_public: a.is_public ?? false,
     organizer_id: a.organizer_id ?? null,
+    shopper_id: a.shopper_id ?? null,
+    cook_ids: a.cook_ids ?? [],
     add_to_calendar: true,
   };
 }
@@ -56,6 +60,8 @@ function formToPayload(form: FormState, includeCalendar = false) {
     cost: form.cost === '' ? null : form.cost,
     is_public: form.is_public,
     organizer_id: form.organizer_id,
+    shopper_id: form.shopper_id,
+    cook_ids: form.cook_ids,
   };
   if (includeCalendar) payload.add_to_calendar = form.add_to_calendar;
   return payload;
@@ -115,6 +121,28 @@ function ActivityForm({ form, setForm, organizers, showCalendarOption = false }:
           value={form.organizer_id ? String(form.organizer_id) : null}
           onChange={v=>setForm(f=>({...f,organizer_id:v?Number(v):null}))}
         />
+      )}
+      {organizers.length > 0 && (
+        <Group grow align="flex-start">
+          <Select
+            label="Boodschappen"
+            placeholder="Wie doet boodschappen?"
+            clearable
+            searchable
+            data={organizers.map(o=>({value:String(o.id),label:o.username}))}
+            value={form.shopper_id ? String(form.shopper_id) : null}
+            onChange={v=>setForm(f=>({...f,shopper_id:v?Number(v):null}))}
+          />
+          <MultiSelect
+            label="Koks"
+            placeholder={form.cook_ids.length === 0 ? 'Wie gaan er koken?' : ''}
+            clearable
+            searchable
+            data={organizers.map(o=>({value:String(o.id),label:o.username}))}
+            value={form.cook_ids.map(String)}
+            onChange={vals=>setForm(f=>({...f,cook_ids:vals.map(Number)}))}
+          />
+        </Group>
       )}
       <Switch label="Publiek zichtbaar" checked={form.is_public} onChange={e=>setForm(f=>({...f,is_public:e.currentTarget.checked}))} color="brand" />
       {showCalendarOption && (

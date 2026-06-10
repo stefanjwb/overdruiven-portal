@@ -9,13 +9,14 @@ import { Carousel } from '@mantine/carousel';
 import {
   IconCalendarEvent, IconMapPin, IconClock,
   IconUsers, IconLock, IconArrowRight, IconGlassFull, IconCamera,
-  IconNews, IconChevronDown,
+  IconNews, IconChevronDown, IconTrash,
 } from '@tabler/icons-react';
 
 import { useMediaQuery } from '@mantine/hooks';
 import { useAuth } from '../context/AuthContext';
 import { getUpcomingActivities, getPublicActivities, getMySignups } from '../api/activities';
-import { getHomepageWines } from '../api/wines';
+import { getHomepageWines, updateWine } from '../api/wines';
+import { notifications } from '@mantine/notifications';
 import { getPublishedPosts } from '../api/blog';
 import { BlogCard, FeaturedPost } from './Blog';
 import dayjs from 'dayjs';
@@ -123,7 +124,7 @@ const WINE_TYPE_GRADIENTS: Record<string, string> = {
   zoet:        'linear-gradient(160deg, #2a0e40 0%, #551e7a 60%, #8840b0 100%)',
 };
 
-function WineCard({ w }: { w: any }) {
+function WineCard({ w, onRemove }: { w: any; onRemove?: () => void }) {
   const [photoOpen, setPhotoOpen] = useState(false);
   const gradient = WINE_TYPE_GRADIENTS[w.wine_type] ?? 'linear-gradient(160deg, #1a1a2e 0%, #2d2d4e 100%)';
 
@@ -164,9 +165,9 @@ function WineCard({ w }: { w: any }) {
           </Badge>
         </div>
 
-        {/* Camera knop rechtsboven */}
-        {w.image && (
-          <div style={{ position: 'absolute', top: 12, right: 12 }}>
+        {/* Knoppen rechtsboven */}
+        <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: 6 }}>
+          {w.image && (
             <Tooltip label="Foto bekijken">
               <ActionIcon
                 variant="filled"
@@ -178,8 +179,21 @@ function WineCard({ w }: { w: any }) {
                 <IconCamera size={15} color="white" />
               </ActionIcon>
             </Tooltip>
-          </div>
-        )}
+          )}
+          {onRemove && (
+            <Tooltip label="Van homepage halen">
+              <ActionIcon
+                variant="filled"
+                size="md"
+                radius="xl"
+                onClick={onRemove}
+                style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.15)' }}
+              >
+                <IconTrash size={15} color="white" />
+              </ActionIcon>
+            </Tooltip>
+          )}
+        </div>
 
         {/* Decoratief wijn-icoon als er geen foto is */}
         {!w.image && (
@@ -233,13 +247,15 @@ function WineCard({ w }: { w: any }) {
 }
 
 export default function Home() {
-  const { isLoggedIn, loading } = useAuth();
+  const { isLoggedIn, isOrganizer, loading } = useAuth();
   const navigate = useNavigate();
   const [activities, setActivities] = useState<any[]>([]);
   const [actsLoading, setActsLoading] = useState(false);
   const [signedUpIds, setSignedUpIds] = useState<number[]>([]);
   const [homepageWines, setHomepageWines] = useState<any[]>([]);
   const [blogPosts, setBlogPosts] = useState<any[]>([]);
+  const [removeTarget, setRemoveTarget] = useState<any | null>(null);
+  const [removing, setRemoving] = useState(false);
   const isMobile = useMediaQuery('(max-width: 48em)');
 
   const loadActivities = useCallback(() => {
@@ -261,6 +277,21 @@ export default function Home() {
 
   const scrollToActivities = () => {
     document.getElementById('activiteiten')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const removeFromHomepage = async () => {
+    if (!removeTarget) return;
+    setRemoving(true);
+    try {
+      await updateWine(removeTarget.id, { show_on_homepage: false });
+      setHomepageWines(ws => ws.filter(x => x.id !== removeTarget.id));
+      notifications.show({ message: `'${removeTarget.name}' is van de homepage gehaald.`, color: 'green' });
+      setRemoveTarget(null);
+    } catch {
+      notifications.show({ message: 'Verwijderen van homepage mislukt.', color: 'red' });
+    } finally {
+      setRemoving(false);
+    }
   };
 
   return (
@@ -389,13 +420,33 @@ export default function Home() {
             >
               {homepageWines.map(w => (
                 <Carousel.Slide key={w.id}>
-                  <WineCard w={w} />
+                  <WineCard w={w} onRemove={isOrganizer ? () => setRemoveTarget(w) : undefined} />
                 </Carousel.Slide>
               ))}
             </Carousel>
           </Container>
         </div>
       )}
+
+      {/* Bevestiging: wijn van homepage halen */}
+      <Modal opened={!!removeTarget} onClose={() => setRemoveTarget(null)} title="Wijn van homepage halen" size="sm" centered>
+        {removeTarget && (
+          <Stack gap="md">
+            <Text size="sm">
+              Weet je zeker dat je <strong>{removeTarget.name}</strong> van de homepage wilt halen?
+            </Text>
+            <Text size="sm" c="dimmed">
+              De wijn wordt <strong>niet verwijderd</strong> — hij blijft gewoon in de wijnbibliotheek staan,
+              maar is alleen niet meer zichtbaar op de homepagina. Via Admin panel → Wijnbibliotheek kun je
+              hem altijd weer terugzetten.
+            </Text>
+            <Group grow>
+              <Button variant="default" onClick={() => setRemoveTarget(null)}>Annuleren</Button>
+              <Button color="brand" loading={removing} onClick={removeFromHomepage}>Van homepage halen</Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
 
       {/* Activiteiten */}
       <div id="activiteiten">

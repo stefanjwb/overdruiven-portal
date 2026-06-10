@@ -1,3 +1,4 @@
+import json
 from typing import Optional
 from datetime import date
 from sqlmodel import SQLModel, Field
@@ -16,3 +17,14 @@ class Activity(SQLModel, table=True):
     is_public: bool = Field(default=False)
     cost: Optional[float] = None
     organizer_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    shopper_id: Optional[int] = Field(default=None, foreign_key="user.id")  # doet boodschappen
+    cooks: str = Field(default="[]")  # JSON array van user-ids die koken
+
+    def get_cook_ids(self) -> list[int]:
+        try:
+            return [int(i) for i in json.loads(self.cooks)]
+        except Exception:
+            return []
+
+    def set_cook_ids(self, ids: list[int]) -> None:
+        self.cooks = json.dumps(ids)

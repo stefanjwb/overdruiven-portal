@@ -19,6 +19,8 @@ MAX_GUEST_NAME_LENGTH = 100
 
 class SignupRequest(BaseModel):
     guest_names: list[str] = []
+    guest_eats: list[bool] = []
+    eats_along: bool = True
 
     @field_validator("guest_names")
     @classmethod
@@ -68,11 +70,38 @@ def signup_for_activity(
         if current_total + 1 + guest_count > activity.max_participants:
             raise HTTPException(400, "Er zijn niet genoeg plaatsen meer voor jou en je gasten.")
 
-    signup = Signup(activity_id=activity_id, participant_name=current_user.username)
+    signup = Signup(activity_id=activity_id, participant_name=current_user.username, eats_along=body.eats_along)
     signup.set_guest_names(body.guest_names)
+    signup.set_guest_eats(body.guest_eats)
     session.add(signup)
     session.commit()
     return {"message": f"Succesvol aangemeld voor {activity.name}."}
+
+
+class EatsAlongUpdate(BaseModel):
+    eats_along: bool
+
+
+@router.patch("/me/{activity_id}")
+def update_my_eats_along(
+    activity_id: int,
+    body: EatsAlongUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Wijzig of je mee-eet bij een activiteit waarvoor je bent aangemeld."""
+    signup = session.exec(
+        select(Signup).where(
+            Signup.activity_id == activity_id,
+            Signup.participant_name == current_user.username,
+        )
+    ).first()
+    if not signup:
+        raise HTTPException(404, "Je bent niet aangemeld voor deze activiteit.")
+    signup.eats_along = body.eats_along
+    session.add(signup)
+    session.commit()
+    return {"eats_along": signup.eats_along}
 
 
 @router.get("/me")
@@ -136,11 +165,15 @@ def delete_guest(
         raise HTTPException(404, "Aanmelding niet gevonden.")
 
     names = signup.get_guest_names()
+    eats = signup.get_guest_eats()
     if guest_index < 0 or guest_index >= len(names):
         raise HTTPException(404, "Gast niet gevonden.")
 
     removed = names.pop(guest_index)
+    if guest_index < len(eats):
+        eats.pop(guest_index)
     signup.set_guest_names(names)
+    signup.set_guest_eats(eats)
     session.add(signup)
     session.commit()
     return {"message": f"Gast '{removed}' verwijderd."}

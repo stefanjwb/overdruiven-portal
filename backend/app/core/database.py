@@ -12,6 +12,28 @@ def create_db_and_tables():
     # Import models zodat ze geregistreerd zijn bij SQLModel.metadata
     import app.models  # noqa: F401
     SQLModel.metadata.create_all(engine)
+    _migrate_columns()
+
+
+def _migrate_columns():
+    """Voeg nieuwe kolommen toe aan bestaande tabellen (create_all doet dat niet)."""
+    migrations = {
+        "activity": [
+            ("shopper_id", "INTEGER REFERENCES user(id)"),
+            ("cooks", "TEXT DEFAULT '[]'"),
+        ],
+        "signup": [
+            ("eats_along", "BOOLEAN DEFAULT 1"),
+            ("guest_eats", "TEXT DEFAULT '[]'"),
+        ],
+    }
+    with engine.connect() as conn:
+        for table, columns in migrations.items():
+            existing = {row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")}
+            for name, ddl in columns:
+                if name not in existing:
+                    conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
+        conn.commit()
 
 
 def get_session():
