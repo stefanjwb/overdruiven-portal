@@ -144,9 +144,9 @@ export default function Blog() {
           <Text size="xs" fw={700} tt="uppercase" style={{ letterSpacing: 3, color: 'rgba(255,255,255,0.75)' }} mb={6}>
             Château Overdruiven
           </Text>
-          <Title order={1} style={{ color: 'white' }} mb={8}>Blog</Title>
-          <Text maw={480} mx="auto" style={{ color: 'rgba(255,255,255,0.85)' }}>
-            Verhalen en hoogtepunten van onze wijnavonden — zo proef je alvast de sfeer.
+          <Title order={1} style={{ fontSize: 'clamp(1.8rem, 5vw, 2.6rem)', color: 'white' }} mb={8}>Blog</Title>
+          <Text fz={{ base: 'sm', sm: 'md' }} maw={480} mx="auto" style={{ color: 'rgba(255,255,255,0.85)' }}>
+            Verhalen en hoogtepunten van onze wijnavonden. Zo proef je alvast de sfeer.
           </Text>
         </Container>
       </div>

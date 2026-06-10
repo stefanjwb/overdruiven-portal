@@ -12,6 +12,7 @@ import {
   IconNews, IconChevronDown,
 } from '@tabler/icons-react';
 
+import { useMediaQuery } from '@mantine/hooks';
 import { useAuth } from '../context/AuthContext';
 import { getUpcomingActivities, getPublicActivities, getMySignups } from '../api/activities';
 import { getHomepageWines } from '../api/wines';
@@ -39,8 +40,8 @@ function SectionHeader({ eyebrow, title, subtitle, action }: {
         <Text size="xs" fw={700} tt="uppercase" c="brand" style={{ letterSpacing: 2 }} mb={4}>
           {eyebrow}
         </Text>
-        <Title order={2} mb={2}>{title}</Title>
-        {subtitle && <Text size="sm" c="dimmed">{subtitle}</Text>}
+        <Title order={2} fz={{ base: 'h3', sm: 'h2' }} mb={2}>{title}</Title>
+        {subtitle && <Text fz={{ base: 'xs', sm: 'sm' }} c="dimmed">{subtitle}</Text>}
       </div>
       {action}
     </Group>
@@ -239,6 +240,7 @@ export default function Home() {
   const [signedUpIds, setSignedUpIds] = useState<number[]>([]);
   const [homepageWines, setHomepageWines] = useState<any[]>([]);
   const [blogPosts, setBlogPosts] = useState<any[]>([]);
+  const isMobile = useMediaQuery('(max-width: 48em)');
 
   const loadActivities = useCallback(() => {
     setActsLoading(true);
@@ -281,34 +283,34 @@ export default function Home() {
         }} />
 
         <Container size="md" style={{ position: 'relative', textAlign: 'center', padding: '64px 16px' }}>
-          <Text size="sm" fw={700} tt="uppercase" style={{ letterSpacing: 4, color: 'rgba(255,255,255,0.75)' }} mb="xs">
+          <Text fz={{ base: 'xs', sm: 'sm' }} fw={700} tt="uppercase" style={{ letterSpacing: 4, color: 'rgba(255,255,255,0.75)' }} mb="xs">
             Utrechtse wijnclub
           </Text>
-          <Title order={1} style={{ fontSize: 'clamp(2.2rem, 6vw, 3.4rem)', lineHeight: 1.1, color: 'white' }} mb="md">
+          <Title order={1} style={{ fontSize: 'clamp(1.8rem, 6vw, 3.4rem)', lineHeight: 1.1, color: 'white' }} mb="md">
             Château Overdruiven
           </Title>
-          <Text size="lg" maw={520} mx="auto" mb="xl" style={{ color: 'rgba(255,255,255,0.85)', lineHeight: 1.6 }}>
+          <Text fz={{ base: 'sm', sm: 'lg' }} maw={520} mx="auto" mb="xl" style={{ color: 'rgba(255,255,255,0.85)', lineHeight: 1.6 }}>
             Samen proeven, leren en genieten. Lees onze verhalen, blader door de wijnen
             die we dronken en ontdek wat er op de agenda staat.
           </Text>
           <Group justify="center" gap="sm">
             <Button
-              size="md"
+              size={isMobile ? 'sm' : 'md'}
               color="brand"
               variant="white"
               c="brand.7"
-              leftSection={<IconNews size={18} />}
+              leftSection={<IconNews size={isMobile ? 16 : 18} />}
               onClick={() => navigate('/blog')}
             >
               Lees onze blog
             </Button>
             <Button
-              size="md"
+              size={isMobile ? 'sm' : 'md'}
               variant="outline"
               color="gray.0"
               c="white"
               style={{ borderColor: 'rgba(255,255,255,0.5)' }}
-              leftSection={<IconCalendarEvent size={18} />}
+              leftSection={<IconCalendarEvent size={isMobile ? 16 : 18} />}
               onClick={scrollToActivities}
             >
               Bekijk activiteiten
