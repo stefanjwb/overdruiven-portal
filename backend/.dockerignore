@@ -1,0 +1,19 @@
+# Geheimen: nooit in image-lagen bakken, altijd via env_file/volume aanleveren
+.env
+.env.*
+credentials/
+
+# Runtime-data: wordt toch overschreven door de volume-mount, bevat productiedata
+instance/
+
+# Niet nodig om te builden / lokale artefacten
+docker-compose.yml
+.git
+.gitignore
+README.md
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
