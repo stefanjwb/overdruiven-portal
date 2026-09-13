@@ -1,7 +1,6 @@
 import { RichTextEditor, Link } from '@mantine/tiptap';
 import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Placeholder from '@tiptap/extension-placeholder';
 import Image from '@tiptap/extension-image';
@@ -20,9 +19,13 @@ export default function BlogEditor({ initialContent, onChange }: Props) {
     // Vereist bij React.StrictMode (zie main.tsx): zonder dit rendert TipTap de
     // editor direct tijdens de render-fase, wat met React 18 crasht bij interactie.
     immediatelyRender: false,
+    // Tiptap v3 rerendert niet meer automatisch bij elke transactie; dit is nodig
+    // zodat de actieve-status van de toolbar-knoppen (bold/italic/...) blijft kloppen.
+    shouldRerenderOnTransaction: true,
     extensions: [
-      StarterKit,
-      Underline,
+      // StarterKit bevat sinds v3 Underline en Link ingebouwd; link uitzetten
+      // zodat Mantine's eigen (gestylede) Link-extensie de link-knoppen aandrijft.
+      StarterKit.configure({ link: false }),
       Link,
       Image.configure({ inline: false }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
