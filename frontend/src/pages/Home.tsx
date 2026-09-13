@@ -405,8 +405,7 @@ export default function Home() {
             <Carousel
               slideSize={{ base: '100%', sm: '50%', md: '33.333%' }}
               slideGap="lg"
-              loop
-              align="start"
+              emblaOptions={{ loop: true, align: 'start' }}
               styles={{
                 control: {
                   background: 'var(--mantine-color-brand-7)',

@@ -15,7 +15,7 @@ import 'dayjs/locale/nl';
 const emptyForm = {
   name: '',
   description: '',
-  date: null as Date | null,
+  date: null as string | null,  // Mantine 8+: DateInput geeft een datum-string terug
   start_time: '',
   end_time: '',
   location: '',
@@ -34,7 +34,7 @@ function activityToForm(a: any): FormState {
   return {
     name: a.name ?? '',
     description: a.description ?? '',
-    date: a.date ? new Date(a.date) : null,
+    date: a.date ?? null,
     start_time: a.start_time ?? '',
     end_time: a.end_time ?? '',
     location: a.location ?? '',

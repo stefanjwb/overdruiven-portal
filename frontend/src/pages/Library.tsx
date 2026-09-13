@@ -75,7 +75,7 @@ function WineCard({ wine, editable, onSave }: { wine: any; editable: boolean; on
       </Group>
 
       {/* Uitvouwbaar deel */}
-      <Collapse in={open}>
+      <Collapse expanded={open}>
         <Stack gap="xs" mt="sm">
           {wine.grape_varieties?.length > 0 && (
             <Text size="xs" c="dimmed">{wine.grape_varieties.join(', ')}</Text>
@@ -151,7 +151,8 @@ function WineList({ wines, loading, tab, onSave }: {
   const [typeFilter, setTypeFilter] = useState<string[]>([]);
   const [countryFilter, setCountryFilter] = useState<string | null>(null);
   const [vintageFilter, setVintageFilter] = useState<string | null>(null);
-  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
+  // Mantine 8+ geeft datum-strings (YYYY-MM-DD) terug in plaats van Date-objecten.
+  const [dateRange, setDateRange] = useState<[string | null, string | null]>([null, null]);
   const [minRating, setMinRating] = useState(0);
 
   const countries = [...new Set(wines.map(w => w.country).filter(Boolean))].sort();
@@ -178,8 +179,8 @@ function WineList({ wines, loading, tab, onSave }: {
     if (vintageFilter && String(w.vintage) !== vintageFilter) return false;
     if (dateRange[0]) {
       const actDate = new Date(w.activity_date);
-      if (actDate < dateRange[0]) return false;
-      if (dateRange[1] && actDate > dateRange[1]) return false;
+      if (actDate < new Date(dateRange[0])) return false;
+      if (dateRange[1] && actDate > new Date(dateRange[1])) return false;
     }
     if (minRating > 0 && (w.rating ?? 0) < minRating) return false;
     return true;
@@ -225,7 +226,7 @@ function WineList({ wines, loading, tab, onSave }: {
             )}
           </Group>
 
-          <Collapse in={filtersOpen}>
+          <Collapse expanded={filtersOpen}>
             <Stack gap="sm" mt="sm">
               <TextInput
                 placeholder="Zoek op naam of producent..."

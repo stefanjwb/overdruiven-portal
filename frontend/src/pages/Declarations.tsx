@@ -43,7 +43,7 @@ export default function Declarations() {
 
   const form = useForm({
     initialValues: {
-      date:         null as Date | null,
+      date:         null as string | null,  // Mantine 8+: DateInput geeft een datum-string terug
       amount:       '' as number | string,
       article:      '',
       description:  '',

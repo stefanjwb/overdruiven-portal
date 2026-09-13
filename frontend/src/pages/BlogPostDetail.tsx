@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   Container, Title, Text, Group, Center, Loader, Button, Image, Divider,
-  TypographyStylesProvider,
+  Typography,
 } from '@mantine/core';
 import { IconCalendarEvent, IconUser, IconArrowLeft } from '@tabler/icons-react';
 import { getPost } from '../api/blog';
@@ -75,12 +75,12 @@ export default function BlogPostDetail() {
       <Divider mb="lg" />
 
       {looksLikeHtml(post.content) ? (
-        <TypographyStylesProvider>
+        <Typography>
           <div
             style={{ lineHeight: 1.7 }}
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
           />
-        </TypographyStylesProvider>
+        </Typography>
       ) : (
         <Text style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{post.content}</Text>
       )}
