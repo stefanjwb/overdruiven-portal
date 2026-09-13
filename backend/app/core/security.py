@@ -1,28 +1,38 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 from fastapi import Depends, HTTPException, Request, status
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from sqlmodel import Session
 
 from app.core.config import settings
 from app.core.database import get_session
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 # In-memory set van ingetrokken token-JTIs (wordt leeg bij herstart)
 _revoked_jtis: set[str] = set()
+
+BCRYPT_ROUNDS = 12
+# bcrypt negeert alles voorbij 72 bytes; expliciet knippen voorkomt een
+# ValueError bij (zeldzame) langere wachtwoorden, i.p.v. een 500-crash.
+_BCRYPT_MAX_BYTES = 72
 
 
 # ---------- Password hashing ----------
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    pw_bytes = password.encode("utf-8")[:_BCRYPT_MAX_BYTES]
+    return bcrypt.hashpw(pw_bytes, bcrypt.gensalt(rounds=BCRYPT_ROUNDS)).decode("utf-8")
 
 
-def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+def verify_password(plain: str, hashed: str | None) -> bool:
+    if not hashed:
+        return False
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8")[:_BCRYPT_MAX_BYTES], hashed.encode("utf-8"))
+    except ValueError:
+        # Onherkenbaar/corrupt hash-formaat: behandel als "komt niet overeen".
+        return False
 
 
 # ---------- JWT tokens ----------

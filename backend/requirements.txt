@@ -7,8 +7,7 @@ pydantic-settings==2.15.0
 
 # Auth
 python-jose[cryptography]==3.5.0
-passlib[bcrypt]==1.7.4
-bcrypt==4.0.1  # pinned: bcrypt>=4.1 dropped bcrypt.__about__, which breaks passlib's version check
+bcrypt==5.0.0
 python-multipart==0.0.32
 itsdangerous==2.2.0
 
