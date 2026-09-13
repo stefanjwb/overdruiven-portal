@@ -348,13 +348,28 @@ def verify_magic_link(token: str, response: Response, session: Session = Depends
 
 # ---- Profiel ----
 
+MAX_AVATAR_CHARS = 2_000_000  # ruim boven een normale geresizede profielfoto
+
+
+def _validate_avatar(avatar) -> None:
+    if avatar is None or avatar == "":
+        return
+    if not isinstance(avatar, str) or not avatar.startswith("data:image/"):
+        raise HTTPException(400, "Avatar moet een geüploade afbeelding zijn (data-URL).")
+    if len(avatar) > MAX_AVATAR_CHARS:
+        raise HTTPException(400, "Avatar is te groot.")
+
+
 @router.patch("/me", response_model=UserResponse)
+@limiter.limit("10/minute")
 def update_me(
+    request: Request,
     data: dict,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
     if "avatar" in data:
+        _validate_avatar(data["avatar"])
         current_user.avatar = data["avatar"]
 
     if data.get("new_password"):

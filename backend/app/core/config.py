@@ -2,9 +2,12 @@ from pydantic_settings import BaseSettings
 from typing import List
 
 
+DEFAULT_SECRET_KEY = "change-me-in-production"
+
+
 class Settings(BaseSettings):
     # App
-    SECRET_KEY: str = "change-me-in-production"
+    SECRET_KEY: str = DEFAULT_SECRET_KEY
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30       # Kortere levensduur
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
@@ -44,9 +47,11 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-if settings.SECRET_KEY == "change-me-in-production":
-    import warnings
-    warnings.warn(
-        "SECRET_KEY staat nog op de standaardwaarde! Stel een veilige SECRET_KEY in via de .env.",
-        stacklevel=2,
+if not settings.SECRET_KEY or settings.SECRET_KEY == DEFAULT_SECRET_KEY:
+    # Deze sleutel ondertekent JWT's en de session-cookie: met een lege of
+    # standaardwaarde kan iedereen een geldig admin-token vervalsen. Liever een
+    # crash bij het opstarten dan een auth-bypass in productie.
+    raise RuntimeError(
+        "SECRET_KEY ontbreekt of staat nog op de standaardwaarde 'change-me-in-production'. "
+        "Stel een veilige, willekeurige SECRET_KEY in via de .env voordat de app start."
     )
