@@ -1,6 +1,6 @@
 # Core
 fastapi==0.141.1
-starlette==0.52.1  # pinned <1.0: keep off the new major until it's vetted
+starlette==1.6.0  # pinned explicitly: fastapi has no upper bound, and 0.x has unpatched CVEs (fixed only in 1.0.1+/1.1.0/1.3.0/1.3.1)
 uvicorn[standard]==0.52.4
 sqlmodel==0.0.42
 pydantic-settings==2.15.0
