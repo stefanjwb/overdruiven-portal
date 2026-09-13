@@ -1,28 +1,29 @@
 # Core
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
-sqlmodel==0.0.22
-pydantic-settings==2.7.1
+fastapi==0.141.1
+starlette==0.52.1  # pinned <1.0: keep off the new major until it's vetted
+uvicorn[standard]==0.52.4
+sqlmodel==0.0.42
+pydantic-settings==2.15.0
 
 # Auth
-python-jose[cryptography]==3.3.0
+python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
-bcrypt==4.0.1
-python-multipart==0.0.20
+bcrypt==4.0.1  # pinned: bcrypt>=4.1 dropped bcrypt.__about__, which breaks passlib's version check
+python-multipart==0.0.32
 itsdangerous==2.2.0
 
 # Email validation
-email-validator==2.2.0
+email-validator==2.3.0
 
 # HTML sanitization (blogposts)
-nh3==0.3.5
+nh3==0.3.7
 
 # Google Calendar
-google-api-python-client==2.173.0
-google-auth==2.40.3
+google-api-python-client==2.200.0
+google-auth==2.58.0
 
 # Rate limiting
-slowapi==0.1.9
+slowapi==0.1.10
 
 # Environment
-python-dotenv==1.1.0
+python-dotenv==1.2.3
